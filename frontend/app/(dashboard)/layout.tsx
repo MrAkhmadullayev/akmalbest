@@ -15,17 +15,17 @@ import { notificationsService } from '@/services/notifications';
 import { debtsService } from '@/services/debts';
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Sotuv', href: '/pos', icon: ShoppingCart },
-  { name: 'Mahsulotlar', href: '/products', icon: Package },
-  { name: 'Kategoriyalar', href: '/categories', icon: Tags },
-  { name: 'Mijozlar', href: '/customers', icon: Users },
-  { name: 'Qarzlar', href: '/debts', icon: CreditCard },
-  { name: 'Xarajatlar', href: '/expenses', icon: Wallet },
-  { name: 'Hisobotlar', href: '/reports', icon: BarChart3 },
-  { name: 'Bildirishnomalar', href: '/notifications', icon: Bell },
-  { name: 'Foydalanuvchilar', href: '/users', icon: UserCog },
-  { name: 'Sozlamalar', href: '/settings', icon: Settings },
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, permission: 'dashboard' },
+  { name: 'Sotuv', href: '/pos', icon: ShoppingCart, permission: 'pos' },
+  { name: 'Mahsulotlar', href: '/products', icon: Package, permission: 'products' },
+  { name: 'Kategoriyalar', href: '/categories', icon: Tags, permission: 'categories' },
+  { name: 'Mijozlar', href: '/customers', icon: Users, permission: 'customers' },
+  { name: 'Qarzlar', href: '/debts', icon: CreditCard, permission: 'debts' },
+  { name: 'Xarajatlar', href: '/expenses', icon: Wallet, permission: 'expenses' },
+  { name: 'Hisobotlar', href: '/reports', icon: BarChart3, permission: 'reports' },
+  { name: 'Bildirishnomalar', href: '/notifications', icon: Bell, permission: 'notifications' },
+  { name: 'Foydalanuvchilar', href: '/users', icon: UserCog, permission: 'users' },
+  { name: 'Sozlamalar', href: '/settings', icon: Settings, permission: 'settings' },
 ];
 
 export default function DashboardLayout({
@@ -33,7 +33,7 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, isAuthenticated, isLoading, logout, hasRole } = useAuth();
+  const { user, isAuthenticated, isLoading, logout, hasRole, hasPermission } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -56,7 +56,7 @@ export default function DashboardLayout({
     queryKey: ['debts-notifications'],
     queryFn: () => debtsService.getNotifications(),
     refetchInterval: 60000,
-    enabled: isAuthenticated && hasRole('SUPER_ADMIN', 'ADMIN', 'CASHIER'),
+    enabled: isAuthenticated && hasPermission('debts'),
   });
 
   useEffect(() => {
@@ -74,20 +74,10 @@ export default function DashboardLayout({
   }
 
   const filteredNav = navigation.filter((item) => {
-    // Role-based navigation filtering
-    if (item.href === '/users' || item.href === '/settings') {
-      return hasRole('SUPER_ADMIN');
-    }
-    if (item.href === '/expenses' || item.href === '/reports') {
-      return hasRole('SUPER_ADMIN', 'ADMIN');
-    }
-    if (item.href === '/inventory') {
-      return hasRole('SUPER_ADMIN', 'ADMIN', 'WAREHOUSE_MANAGER');
-    }
-    if (item.href === '/pos') {
-      return hasRole('SUPER_ADMIN', 'ADMIN', 'CASHIER');
-    }
-    return true;
+    // Dashboard va Notifications hamma uchun ochiq bo'lishi mumkin (yoki admin qanday belgilagan bo'lsa)
+    // Agar foydalanuvchida eski permissions yo'q bo'lsa, role orqali fallback qilish mumkin, 
+    // lekin backend'dan to'g'ri permission kelsa hasPermission ishlaydi.
+    return hasPermission(item.permission);
   });
 
   const handleLogout = async () => {

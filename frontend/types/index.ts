@@ -13,6 +13,7 @@ export interface User {
   phone: string;
   role: 'SUPER_ADMIN' | 'ADMIN' | 'CASHIER' | 'WAREHOUSE_MANAGER';
   is_active: boolean;
+  permissions: Record<string, boolean>;
   created_at: string;
   updated_at: string;
 }

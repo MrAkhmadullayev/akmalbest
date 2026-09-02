@@ -11,6 +11,7 @@ interface AuthContextType {
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   hasRole: (...roles: string[]) => boolean;
+  hasPermission: (module: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -69,6 +70,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return roles.includes(user.role);
   };
 
+  const hasPermission = (module: string) => {
+    if (!user) return false;
+    // SUPER_ADMIN has access to everything
+    if (user.role === 'SUPER_ADMIN') return true;
+    
+    // Check specific permission if it exists
+    if (user.permissions && Object.keys(user.permissions).length > 0) {
+      return !!user.permissions[module];
+    }
+
+    // Fallback based on roles if permissions are empty (legacy mode)
+    const adminModules = ['dashboard', 'products', 'categories', 'customers', 'debts', 'expenses', 'reports', 'notifications', 'pos'];
+    const cashierModules = ['dashboard', 'pos', 'products', 'categories', 'customers', 'debts', 'notifications'];
+    const warehouseModules = ['dashboard', 'products', 'categories', 'notifications'];
+
+    if (user.role === 'ADMIN') return adminModules.includes(module);
+    if (user.role === 'CASHIER') return cashierModules.includes(module);
+    if (user.role === 'WAREHOUSE_MANAGER') return warehouseModules.includes(module);
+
+    return false;
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -78,6 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         logout,
         hasRole,
+        hasPermission,
       }}
     >
       {children}
