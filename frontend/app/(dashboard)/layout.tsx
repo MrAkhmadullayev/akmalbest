@@ -7,7 +7,7 @@ import Link from 'next/link';
 import {
   LayoutDashboard, ShoppingCart, Package, Warehouse,
   Users, CreditCard, Wallet, BarChart3,
-  Bell, UserCog, Settings, LogOut, ChevronLeft, Menu,
+  Bell, UserCog, Settings, LogOut, ChevronLeft, Menu, Tags,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -18,6 +18,7 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Sotuv', href: '/pos', icon: ShoppingCart },
   { name: 'Mahsulotlar', href: '/products', icon: Package },
+  { name: 'Kategoriyalar', href: '/categories', icon: Tags },
   { name: 'Mijozlar', href: '/customers', icon: Users },
   { name: 'Qarzlar', href: '/debts', icon: CreditCard },
   { name: 'Xarajatlar', href: '/expenses', icon: Wallet },

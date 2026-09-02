@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { productsService } from '@/services/products';
+import { productsService, categoriesService } from '@/services/products';
 import { formatCurrency, getStockStatus } from '@/lib/utils';
 import { Search, Plus, Edit, Trash2, Eye } from 'lucide-react';
 import Link from 'next/link';
@@ -16,6 +16,11 @@ export default function ProductsPage() {
 
   const [stockModal, setStockModal] = useState<{ isOpen: boolean; product: any }>({ isOpen: false, product: null });
   const [stockData, setStockData] = useState({ quantity: 0, purchase_price: 0, payment_method: 'CASH', notes: '' });
+
+  const { data: categoriesData } = useQuery({
+    queryKey: ['categories-list'],
+    queryFn: () => categoriesService.getAll({ page_size: '100' }),
+  });
 
   const { data, isLoading } = useQuery({
     queryKey: ['products', search, category, page, showInactive],
@@ -102,6 +107,21 @@ export default function ProductsPage() {
             placeholder="Nomi yoki shtrix-kodi bo&apos;yicha qidirish..."
             className="input !pl-10"
           />
+        </div>
+        <div className="w-full md:w-64 flex-shrink-0">
+          <select
+            value={category}
+            onChange={(e) => {
+              setCategory(e.target.value);
+              setPage(1);
+            }}
+            className="input"
+          >
+            <option value="">Barcha kategoriyalar</option>
+            {categoriesData?.data?.results?.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
         </div>
         <div className="flex items-center gap-2 px-2">
           <input
