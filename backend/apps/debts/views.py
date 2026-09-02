@@ -39,7 +39,7 @@ class DebtViewSet(viewsets.ReadOnlyModelViewSet):
         due_debts_count = Debt.objects.filter(
             due_date__lte=today
         ).exclude(status='PAID').count()
-        
+
         return Response({
             "success": True,
             "data": {

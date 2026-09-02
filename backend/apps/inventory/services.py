@@ -70,20 +70,20 @@ class InventoryService:
 
         from apps.inventory.models import InventoryBatch, BatchPaymentMethod
         from decimal import Decimal
-        
+
         cogs_cash = Decimal('0')
         cogs_debt = Decimal('0')
-        
+
         # FIFO logic
         remaining_to_decrease = quantity
         batches = InventoryBatch.objects.filter(
             product=product, current_quantity__gt=0
         ).order_by('created_at').select_for_update()
-        
+
         for batch in batches:
             if remaining_to_decrease <= 0:
                 break
-                
+
             if batch.current_quantity >= remaining_to_decrease:
                 deducted = remaining_to_decrease
                 batch.current_quantity -= deducted
@@ -94,7 +94,7 @@ class InventoryService:
                 remaining_to_decrease -= deducted
                 batch.current_quantity = 0
                 batch.save(update_fields=['current_quantity'])
-                
+
             cost = deducted * batch.purchase_price
             if batch.payment_method == BatchPaymentMethod.CASH:
                 cogs_cash += cost

@@ -1,6 +1,7 @@
 """
 Inventory views.
 """
+from django.db import models
 from rest_framework import viewsets, generics, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -78,7 +79,3 @@ class InventoryTransactionViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         return InventoryTransaction.objects.select_related('product', 'created_by').all()
-
-
-# Need to import models for F expression in InventoryViewSet
-from django.db import models

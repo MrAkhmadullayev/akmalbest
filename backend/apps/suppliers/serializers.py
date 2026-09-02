@@ -60,8 +60,10 @@ class PurchaseCreateSerializer(serializers.Serializer):
                 )
             try:
                 item['product'] = Product.objects.get(pk=item['product_id'])
-            except Product.DoesNotExist:
-                raise serializers.ValidationError(f"Mahsulot topilmadi: {item['product_id']}")
+            except Product.DoesNotExist as err:
+                raise serializers.ValidationError(
+                    f"Mahsulot topilmadi: {item['product_id']}"
+                ) from err
             if int(item['quantity']) < 1:
                 raise serializers.ValidationError("Miqdor 1 dan kam bo'lishi mumkin emas.")
         return value

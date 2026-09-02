@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import type { CartItem, Product } from '@/types';
 
 /** Savatga qo'shish natijasi — UI shu asosda xato xabarini ko'rsatadi. */
@@ -13,18 +13,20 @@ export function useCart() {
   const [items, setItems] = useState<CartItem[]>([]);
   const [discount, setDiscount] = useState(0);
 
-  const itemsRef = useRef<CartItem[]>([]);
-  itemsRef.current = items;
-
   /**
    * Mahsulotni savatga qo'shadi.
    *
    * Muhim: ombor tekshiruvi setItems updater'i ICHIDA emas, undan OLDIN
    * bajariladi. Aks holda funksiya har doim {success:true} qaytarardi va
    * kassir tovar tugaganini bilmay qolardi.
+   *
+   * `items` ni to'g'ridan-to'g'ri o'qiymiz (avval `useRef` orqali edi, lekin
+   * render paytida `ref.current` ga yozish React qoidasini buzadi). Natijada
+   * `addItem` har renderda yangi funksiya bo'ladi — POS sahifasida bu
+   * muammo emas, chunki u memo qilingan chuqur daraxtga uzatilmaydi.
    */
   const addItem = useCallback((product: Product): CartActionResult => {
-    const existing = itemsRef.current.find((item) => item.product_id === product.id);
+    const existing = items.find((item) => item.product_id === product.id);
 
     if (existing) {
       if (existing.quantity + 1 > existing.stock) {
@@ -68,7 +70,7 @@ export function useCart() {
     ]);
 
     return { success: true };
-  }, []);
+  }, [items]);
 
   const removeItem = useCallback((productId: string) => {
     setItems((prev) => prev.filter((item) => item.product_id !== productId));

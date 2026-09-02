@@ -10,13 +10,13 @@ class NotificationService:
         """Generate stock notifications based on product thresholds."""
         if product.current_stock <= 0:
             Notification.objects.create(
-                title=f"🔴 Mahsulot tugadi",
+                title="🔴 Mahsulot tugadi",
                 message=f"{product.name} mahsuloti tugadi.",
                 type=NotificationType.OUT_OF_STOCK,
             )
         elif product.current_stock <= product.min_stock:
             Notification.objects.create(
-                title=f"⚠ Mahsulot kam qoldi",
+                title="⚠ Mahsulot kam qoldi",
                 message=f"{product.name} mahsuloti kam qoldi. Qoldiq: {product.current_stock} dona.",
                 type=NotificationType.LOW_STOCK,
             )
@@ -26,15 +26,15 @@ class NotificationService:
         """Create a debt-related notification."""
         type_messages = {
             NotificationType.DEBT_UPCOMING: (
-                f"🟡 Qarzni to'lash muddatiga yaqinlashmoqda",
+                "🟡 Qarzni to'lash muddatiga yaqinlashmoqda",
                 f"{debt.customer.full_name} - {debt.remaining_amount} UZS. Muddat: {debt.due_date}"
             ),
             NotificationType.DEBT_DUE: (
-                f"🔔 Bugun to'lash kerak",
+                "🔔 Bugun to'lash kerak",
                 f"{debt.customer.full_name} - {debt.remaining_amount} UZS. Bugun to'lash muddati."
             ),
             NotificationType.DEBT_OVERDUE: (
-                f"🔴 Qarz muddati o'tgan",
+                "🔴 Qarz muddati o'tgan",
                 f"{debt.customer.full_name} - {debt.remaining_amount} UZS. Qarz muddati o'tgan!"
             ),
         }

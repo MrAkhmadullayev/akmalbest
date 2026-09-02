@@ -2,8 +2,6 @@
 Custom exception handler for consistent API error responses.
 """
 from rest_framework.views import exception_handler
-from rest_framework.response import Response
-from rest_framework import status
 
 
 def custom_exception_handler(exc, context):
@@ -29,7 +27,7 @@ def custom_exception_handler(exc, context):
                 errors = response.data
                 # Build a human-readable message from field errors
                 first_error = None
-                for field, field_errors in response.data.items():
+                for _field, field_errors in response.data.items():
                     if isinstance(field_errors, list) and field_errors:
                         first_error = str(field_errors[0])
                         break

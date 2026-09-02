@@ -103,12 +103,12 @@ class PurchaseItem(models.Model):
         verbose_name = 'Xarid elementi'
         verbose_name_plural = 'Xarid elementlari'
 
+    def __str__(self):
+        return f"{self.product.name} x{self.quantity}"
+
     def save(self, *args, **kwargs):
         self.subtotal = self.quantity * self.purchase_price
         super().save(*args, **kwargs)
-
-    def __str__(self):
-        return f"{self.product.name} x{self.quantity}"
 
 
 class SupplierDebt(models.Model):

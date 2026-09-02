@@ -73,11 +73,11 @@ class ProductViewSet(viewsets.ModelViewSet):
         initial_stock = serializer.validated_data.pop('initial_stock', 0)
         payment_method = serializer.validated_data.pop('payment_method', 'CASH')
         product = serializer.save()
-        
+
         # Create inventory record for new product
         from apps.inventory.models import Inventory
         Inventory.objects.get_or_create(product=product, defaults={'quantity': 0})
-        
+
         # Add initial stock as a batch
         if initial_stock > 0:
             from apps.inventory.services import InventoryService
@@ -93,7 +93,7 @@ class ProductViewSet(viewsets.ModelViewSet):
                 purchase_price=product.purchase_price,
                 payment_method=payment_method
             )
-            
+
         # Audit log
         AuditService.log(
             user=self.request.user,
@@ -132,14 +132,14 @@ class ProductViewSet(viewsets.ModelViewSet):
         purchase_price = request.data.get('purchase_price')
         payment_method = request.data.get('payment_method', 'CASH')
         notes = request.data.get('notes', "Qo'shimcha kirim")
-        
+
         try:
             quantity = int(quantity)
             if quantity <= 0:
                 raise ValueError
         except ValueError:
             return Response({'success': False, 'message': "Noto'g'ri miqdor."}, status=status.HTTP_400_BAD_REQUEST)
-            
+
         if purchase_price is None:
             purchase_price = product.purchase_price
         else:
@@ -148,10 +148,10 @@ class ProductViewSet(viewsets.ModelViewSet):
                 purchase_price = Decimal(str(purchase_price))
             except Exception:
                 return Response({'success': False, 'message': "Noto'g'ri narx."}, status=status.HTTP_400_BAD_REQUEST)
-                
+
         from apps.inventory.services import InventoryService
         from apps.inventory.models import TransactionType
-        
+
         try:
             InventoryService.increase_stock(
                 product=product,
@@ -164,15 +164,15 @@ class ProductViewSet(viewsets.ModelViewSet):
                 purchase_price=purchase_price,
                 payment_method=payment_method
             )
-            
+
             # Update product purchase price if it changed
             if product.purchase_price != purchase_price:
                 product.purchase_price = purchase_price
                 product.save(update_fields=['purchase_price', 'updated_at'])
-                
+
         except Exception as e:
             return Response({'success': False, 'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-            
+
         return Response({'success': True, 'message': "Kirim muvaffaqiyatli qo'shildi."})
 
 

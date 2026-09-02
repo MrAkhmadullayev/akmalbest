@@ -47,7 +47,7 @@ class PurchaseService:
                 payment_method=payment_method
             )
             total += purchase_item.subtotal
-            
+
             if payment_method == PaymentMethod.DEBT:
                 debt_amount += purchase_item.subtotal
 
@@ -71,7 +71,7 @@ class PurchaseService:
 
         purchase.total = total
         purchase.save(update_fields=['total'])
-        
+
         if debt_amount > 0:
             SupplierDebt.objects.create(
                 supplier=supplier,

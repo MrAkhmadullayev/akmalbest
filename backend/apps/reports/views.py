@@ -67,11 +67,11 @@ class DashboardView(APIView):
         # Stock values by payment method
         from apps.inventory.models import InventoryBatch
         batches = InventoryBatch.objects.filter(current_quantity__gt=0)
-        
+
         inventory_debt_value = batches.filter(payment_method='DEBT').annotate(
             value=F('current_quantity') * F('purchase_price')
         ).aggregate(total=Sum('value'))['total'] or Decimal('0')
-        
+
         inventory_cash_value = batches.filter(payment_method='CASH').annotate(
             value=F('current_quantity') * F('purchase_price')
         ).aggregate(total=Sum('value'))['total'] or Decimal('0')

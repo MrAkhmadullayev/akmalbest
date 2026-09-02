@@ -43,7 +43,9 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     username = models.CharField(max_length=150, unique=True, db_index=True)
-    email = models.EmailField(max_length=255, blank=True, null=True)
+    # noqa DJ001: `null=True` matn maydonida ikkita "bo'sh" qiymat ('' va NULL)
+    # hosil qiladi. Tuzatish uchun migratsiya kerak — MVP'dan keyin qilinadi.
+    email = models.EmailField(max_length=255, blank=True, null=True)  # noqa: DJ001
     first_name = models.CharField(max_length=150, blank=True)
     last_name = models.CharField(max_length=150, blank=True)
     phone = models.CharField(max_length=20, blank=True)

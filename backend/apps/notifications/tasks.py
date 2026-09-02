@@ -1,5 +1,6 @@
 """Celery tasks for scheduled background jobs."""
 from celery import shared_task
+from django.db import models
 from django.utils import timezone
 from datetime import timedelta
 
@@ -61,7 +62,3 @@ def check_low_stock():
     )
     for product in out_of_stock:
         NotificationService.check_stock_level(product)
-
-
-# Import models at module level for F expression
-from django.db import models

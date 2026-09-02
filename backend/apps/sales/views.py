@@ -1,4 +1,5 @@
 """Sale views."""
+import logging
 from decimal import Decimal
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -15,6 +16,8 @@ from .serializers import (
 from .services import SaleService
 from apps.accounts.permissions import IsCashierOrAdmin, IsAdmin
 from apps.customers.models import Customer
+
+logger = logging.getLogger(__name__)
 
 
 class SaleViewSet(viewsets.ModelViewSet):
@@ -43,11 +46,11 @@ class SaleViewSet(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
-        
+
         # We calculate summary on the *filtered* queryset
         from django.db.models import Sum
         from decimal import Decimal
-        
+
         summary = {
             'total_sales': queryset.aggregate(t=Sum('total'))['t'] or Decimal('0'),
             'cash_sales': queryset.filter(payment_method='CASH').aggregate(t=Sum('total'))['t'] or Decimal('0'),
@@ -108,7 +111,10 @@ class SaleViewSet(viewsets.ModelViewSet):
                 {"success": False, "message": str(e), "errors": {}},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        except Exception as e:
+        except Exception:
+            # Foydalanuvchiga ichki tafsilotni ko'rsatmaymiz, lekin log'siz
+            # 500 xatoni keyin umuman tekshirib bo'lmaydi.
+            logger.exception("Savdo yaratishda kutilmagan xatolik")
             return Response(
                 {"success": False, "message": "Savdo yaratishda xatolik yuz berdi.", "errors": {}},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
