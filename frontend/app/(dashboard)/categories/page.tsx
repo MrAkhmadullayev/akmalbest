@@ -16,6 +16,23 @@ export default function CategoriesPage() {
     queryFn: () => categoriesService.getAll({ page_size: '100' }),
   });
 
+  const handleError = (error: any) => {
+    const data = error.response?.data;
+    if (data) {
+      if (typeof data === 'string') alert(data);
+      else if (data.name) alert(`Xatolik: ${data.name[0]}`);
+      else if (data.message) alert(data.message);
+      else if (data.detail) alert(data.detail);
+      else {
+        const firstError = Object.values(data).flat()[0] as string;
+        if (firstError) alert(`Xatolik: ${firstError}`);
+        else alert("Xatolik yuz berdi.");
+      }
+    } else {
+      alert("Tarmoq xatosi yoki server bilan ulanishda muammo yuz berdi.");
+    }
+  };
+
   const createMutation = useMutation({
     mutationFn: (payload: { name: string; description?: string }) =>
       categoriesService.create(payload),
@@ -24,6 +41,7 @@ export default function CategoriesPage() {
       setName('');
       setDescription('');
     },
+    onError: handleError,
   });
 
   const updateMutation = useMutation({
@@ -35,6 +53,7 @@ export default function CategoriesPage() {
       setDescription('');
       setEditingId(null);
     },
+    onError: handleError,
   });
 
   const deleteMutation = useMutation({
@@ -42,16 +61,18 @@ export default function CategoriesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
     },
+    onError: handleError,
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    const trimmedName = name.trim();
+    if (!trimmedName) return;
 
     if (editingId) {
-      updateMutation.mutate({ id: editingId, payload: { name, description } });
+      updateMutation.mutate({ id: editingId, payload: { name: trimmedName, description: description.trim() } });
     } else {
-      createMutation.mutate({ name, description });
+      createMutation.mutate({ name: trimmedName, description: description.trim() });
     }
   };
 
