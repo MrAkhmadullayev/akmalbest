@@ -1,0 +1,143 @@
+# =============================================================================
+#  ALKAGOL — KAM XOTIRALI PROFIL (512 MB / 1 GB droplet uchun)
+#
+#  Bu fayl mustaqil ishlamaydi — u `docker-compose.prod.yml` USTIGA qo'yiladi:
+#
+#      docker compose -f docker-compose.prod.yml -f docker-compose.lowmem.yml up -d
+#
+#  Skriptlar buni AVTOMATIK qiladi, agar `.env` ichida `LOWMEM=1` bo'lsa.
+#  RAM ni oshirgach `.env` da `LOWMEM=0` qiling va qayta deploy qiling — hech
+#  narsani o'chirish shart emas.
+#
+#  Nima o'zgaradi va NEGA:
+#    * Postgres standart holatda 128 MB shared_buffers oladi — 512 MB'da bu
+#      halokat. 16 MB ga tushiriladi.
+#    * Redis RDB snapshot uchun fork qiladi va shu paytda xotira IKKI baravar
+#      bo'ladi. Snapshot butunlay o'chiriladi (bizda faqat kesh va navbat).
+#    * Gunicorn 3 ta worker ~450 MB yeydi. 1 worker + 8 thread ~150 MB, va
+#      kichik do'kon uchun o'tkazuvchanlik bir xil.
+#    * celery_beat ALOHIDA konteyner sifatida o'chiriladi (~100 MB tejaladi);
+#      uning vazifasi celery_worker ichiga `-B` bayrog'i bilan ko'chiriladi.
+#      Bu bitta worker uchun rasman qo'llab-quvvatlanadigan usul.
+#    * certbot demoni o'chiriladi — u har 12 soatda Python'ni yuklab xotira
+#      cho'qqisi hosil qiladi. Sertifikat yangilashni host cron bajaradi
+#      (scripts/ssl-renew.sh), u haftada bir marta va konteyner tugagach
+#      xotirani darhol bo'shatadi.
+#
+#  DIQQAT: bu profil ishlayotganda swap FAOL bo'lishi SHART. server-setup.sh
+#  uni o'zi yaratadi. Tekshirish: `swapon --show`
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------- PostgreSQL
+  db:
+    # Standart sozlamalar 1 GB+ server uchun mo'ljallangan. Hammasini eng
+    # kichik ishlaydigan qiymatga tushiramiz.
+    command:
+      - postgres
+      - -c
+      - shared_buffers=16MB
+      - -c
+      - effective_cache_size=96MB
+      - -c
+      - maintenance_work_mem=16MB
+      - -c
+      - work_mem=1MB
+      - -c
+      - max_connections=20
+      - -c
+      - wal_buffers=512kB
+      - -c
+      - min_wal_size=64MB
+      - -c
+      - max_wal_size=256MB
+      - -c
+      - autovacuum_work_mem=16MB
+    deploy:
+      resources:
+        limits: { memory: 160M }
+
+  # --------------------------------------------------------------------- Redis
+  #   --save ""        RDB snapshot yo'q (fork paytidagi xotira portlashi yo'q)
+  #   --appendonly no  AOF yo'q (10 GB diskni tejaydi)
+  #   Yo'qotiladigan narsa: restart'da kesh va navbatdagi vazifalar. Bizda
+  #   vazifalar takrorlanuvchi (beat qayta yuboradi), shuning uchun xavfsiz.
+  redis:
+    command: redis-server --save "" --appendonly no --maxmemory 24mb --maxmemory-policy allkeys-lru
+    deploy:
+      resources:
+        limits: { memory: 48M }
+
+  # ------------------------------------------------------------------- Backend
+  backend:
+    command:
+      - gunicorn
+      - config.wsgi:application
+      - --bind=0.0.0.0:8000
+      - --workers=1
+      - --worker-class=gthread
+      - --threads=8
+      - --timeout=${GUNICORN_TIMEOUT:-120}
+      - --graceful-timeout=30
+      # Xotira sizishi to'planmasin — worker tez-tez yangilanadi
+      - --max-requests=300
+      - --max-requests-jitter=50
+      - --access-logfile=-
+      - --error-logfile=-
+    environment:
+      # 20 ta ulanish chegarasida 8 thread + celery uchun joy qoldiramiz
+      DB_CONN_MAX_AGE: "0"
+    deploy:
+      resources:
+        limits: { memory: 256M }
+
+  # ------------------------------------------------------------- Celery worker
+  #  `-B` = beat shu jarayonning ichida ishlaydi. Faqat BITTA worker bo'lganda
+  #  to'g'ri ishlaydi (aks holda vazifalar takrorlanadi) — bizda aynan shunday.
+  celery_worker:
+    command:
+      - celery
+      - -A
+      - config
+      - worker
+      - -B
+      - --scheduler=django_celery_beat.schedulers:DatabaseScheduler
+      - -l
+      - warning
+      - --concurrency=1
+      - --max-tasks-per-child=50
+      - --without-gossip
+      - --without-mingle
+      - --without-heartbeat
+    deploy:
+      resources:
+        limits: { memory: 192M }
+
+  # --------------------------------------------------------------- Celery beat
+  # Vazifasi celery_worker ichiga ko'chdi -> konteyner ishga tushmaydi.
+  celery_beat:
+    deploy:
+      replicas: 0
+
+  # ------------------------------------------------------------------ Frontend
+  frontend:
+    environment:
+      # Node standart holatda mavjud RAM'ning yarmini heap uchun rezerv qiladi.
+      # Cheklamasak GC juda kech ishga tushadi va konteyner o'ldiriladi.
+      NODE_OPTIONS: "--max-old-space-size=96"
+    deploy:
+      resources:
+        limits: { memory: 160M }
+
+  # --------------------------------------------------------------------- Nginx
+  nginx:
+    deploy:
+      resources:
+        limits: { memory: 32M }
+
+  # ------------------------------------------------------------------- Certbot
+  # Doimiy demon o'chiriladi. `docker compose run --rm certbot ...` baribir
+  # ishlaydi (init-letsencrypt.sh va ssl-renew.sh aynan shundan foydalanadi).
+  certbot:
+    deploy:
+      replicas: 0

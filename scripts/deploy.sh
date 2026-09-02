@@ -19,6 +19,19 @@ fail() { printf '\n\033[1;31m[XATO] %s\033[0m\n' "$*"; exit 1; }
 
 [ -f .env ] || fail ".env fayl topilmadi"
 
+# --------------------------------------------------------- Kam xotira profili
+# .env da LOWMEM=1 bo'lsa 512MB/1GB droplet uchun override qo'shiladi.
+# Bu profilda celery_beat va certbot demonlari ishga tushmaydi (replicas: 0),
+# shuning uchun ularni `up` ro'yxatiga ham qo'shmaymiz.
+EXTRA_SERVICES="celery_worker celery_beat certbot"
+if grep -qE '^LOWMEM=1' .env 2>/dev/null && [ -f docker-compose.lowmem.yml ]; then
+  COMPOSE="$COMPOSE -f docker-compose.lowmem.yml"
+  EXTRA_SERVICES="celery_worker"
+  log "KAM XOTIRA profili yoqilgan (docker-compose.lowmem.yml)"
+  swapon --show 2>/dev/null | grep -q . \
+    || log "OGOHLANTIRISH: swap topilmadi — bu profil swap'siz ishonchsiz!"
+fi
+
 DOMAIN="$(grep -E '^DOMAIN=' .env | cut -d= -f2- | tr -d '"' || true)"
 [ -n "$DOMAIN" ] || fail ".env ichida DOMAIN belgilanmagan"
 
@@ -84,7 +97,8 @@ done
 
 # ------------------------------------------------------ 3. Qolgan servislar
 log "Frontend, Celery va Nginx yangilanmoqda"
-$COMPOSE up -d --no-build celery_worker celery_beat frontend certbot || rollback
+# shellcheck disable=SC2086  # EXTRA_SERVICES ataylab bo'linadi
+$COMPOSE up -d --no-build $EXTRA_SERVICES frontend || rollback
 
 # Nginx MAJBURIY qayta yaratiladi: upstream'dagi `backend`/`frontend` nomlari
 # faqat start paytida bir marta DNS'dan o'qiladi. Konteynerlar yangi IP oldi,

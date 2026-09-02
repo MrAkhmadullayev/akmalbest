@@ -97,15 +97,32 @@ sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication no/'   /etc/ssh/ss
 systemctl reload ssh || systemctl reload sshd || true
 
 # ----------------------------------------------------------------- 5. Swap
+RAM_MB="$(awk '/MemTotal/ {print int($2/1024)}' /proc/meminfo)"
+
+# Kichik serverda swappiness PAST bo'lmasligi kerak. 512 MB'da bo'sh turgan
+# jarayonlar (celery, beat) diskka tushishi SHART, aks holda OOM killer
+# Postgres'ni o'ldiradi. Katta serverda esa swap sekinlikka olib keladi.
+if [ "$RAM_MB" -lt 1500 ]; then
+  SWAPPINESS=60
+  SWAP_SIZE=2G
+else
+  SWAPPINESS=10
+  SWAP_SIZE=2G
+fi
+
 if ! swapon --show | grep -q .; then
-  log "2GB swap yaratilmoqda"
-  fallocate -l 2G /swapfile
+  log "${SWAP_SIZE} swap yaratilmoqda (RAM: ${RAM_MB} MB)"
+  fallocate -l "$SWAP_SIZE" /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=2048
   chmod 600 /swapfile
   mkswap /swapfile >/dev/null
   swapon /swapfile
   echo '/swapfile none swap sw 0 0' >> /etc/fstab
-  sysctl -w vm.swappiness=10 >/dev/null
-  echo 'vm.swappiness=10' > /etc/sysctl.d/99-swappiness.conf
+fi
+sysctl -w vm.swappiness="$SWAPPINESS" >/dev/null
+echo "vm.swappiness=$SWAPPINESS" > /etc/sysctl.d/99-swappiness.conf
+
+if [ "$RAM_MB" -lt 1500 ]; then
+  warn "RAM ${RAM_MB} MB — .env faylda LOWMEM=1 QILISHNI UNUTMANG!"
 fi
 
 # ------------------------------------------------------- 6. Loyiha papkasi

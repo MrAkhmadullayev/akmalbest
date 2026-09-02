@@ -20,6 +20,11 @@ COMPOSE="docker compose -f docker-compose.prod.yml"
 
 [ -f .env ] || { echo "XATO: .env fayl topilmadi. cp .env.example .env"; exit 1; }
 
+# Kam xotira profili (512MB/1GB droplet) — deploy.sh bilan bir xil mantiq
+if grep -qE '^LOWMEM=1' .env 2>/dev/null && [ -f docker-compose.lowmem.yml ]; then
+  COMPOSE="$COMPOSE -f docker-compose.lowmem.yml"
+fi
+
 # .env ni `source` QILMAYMIZ — maxsus belgili parol bash'da buyruq bajarib
 # yuborishi mumkin. Faqat kerakli kalitlarni tom ma'noda o'qiymiz.
 env_get() {

@@ -9,6 +9,12 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 COMPOSE="docker compose -f docker-compose.prod.yml"
 
+# Kam xotira profilida certbot DEMONI o'chirilgan (replicas: 0), ya'ni
+# sertifikatni yangilaydigan yagona narsa — aynan shu cron skripti.
+if grep -qE '^LOWMEM=1' .env 2>/dev/null && [ -f docker-compose.lowmem.yml ]; then
+  COMPOSE="$COMPOSE -f docker-compose.lowmem.yml"
+fi
+
 echo "[$(date '+%F %T')] certbot renew"
 # --entrypoint MAJBURIY: prod compose'da certbot servisining entrypoint'i
 # cheksiz sikl (`while :; do ... sleep 12h; done`). Uni almashtirmasak
