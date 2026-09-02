@@ -59,6 +59,23 @@ export default function DashboardLayout({
     enabled: isAuthenticated && hasPermission('debts'),
   });
 
+  // Xavfsizlik: Foydalanuvchi o'ziga ruxsat berilmagan sahifaga URL orqali kirmoqchi bo'lsa
+  useEffect(() => {
+    if (isAuthenticated && !isLoading) {
+      const currentNav = navigation.find(nav => pathname.startsWith(nav.href));
+      if (currentNav && !hasPermission(currentNav.permission)) {
+        // Ruxsat yo'q bo'lsa dashboardga qaytarish (agar dashboardga ruxsati bo'lsa), bo'lmasa pos ga
+        if (hasPermission('dashboard')) {
+          router.replace('/dashboard');
+        } else if (hasPermission('pos')) {
+          router.replace('/pos');
+        } else {
+          router.replace('/');
+        }
+      }
+    }
+  }, [pathname, isAuthenticated, isLoading, hasPermission, router]);
+
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       router.replace('/login');
