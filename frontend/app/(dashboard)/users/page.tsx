@@ -14,6 +14,7 @@ export default function UsersPage() {
   const [role, setRole] = useState('CASHIER');
   const [phone, setPhone] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['users'],
@@ -33,6 +34,21 @@ export default function UsersPage() {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: any }) =>
+      usersService.update(id, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      setUsername('');
+      setPassword('');
+      setFirstName('');
+      setLastName('');
+      setPhone('');
+      setShowAddForm(false);
+      setEditingId(null);
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: (id: string) => usersService.delete(id),
     onSuccess: () => {
@@ -42,21 +58,43 @@ export default function UsersPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username || !password || !firstName || !lastName) return;
+    
+    // When creating, password is required. When editing, it's optional.
+    if (!username || !firstName || !lastName || (!editingId && !password)) return;
 
-    createMutation.mutate({
+    const payload: any = {
       username,
-      password,
-      password_confirm: password,
       first_name: firstName,
       last_name: lastName,
       role,
       phone,
-    });
+    };
+
+    if (password) {
+      payload.password = password;
+      payload.password_confirm = password;
+    }
+
+    if (editingId) {
+      updateMutation.mutate({ id: editingId, payload });
+    } else {
+      createMutation.mutate(payload);
+    }
+  };
+
+  const handleEdit = (user: any) => {
+    setEditingId(user.id);
+    setUsername(user.username);
+    setFirstName(user.first_name);
+    setLastName(user.last_name);
+    setRole(user.role);
+    setPhone(user.phone || '');
+    setPassword('');
+    setShowAddForm(true);
   };
 
   const handleDelete = (id: string) => {
-    if (confirm('Ushbu foydalanuvchini o\'chirmoqchimisiz?')) {
+    if (confirm('Ushbu foydalanuvchini butunlay o\'chirmoqchimisiz?')) {
       deleteMutation.mutate(id);
     }
   };
@@ -70,7 +108,16 @@ export default function UsersPage() {
           <h1 className="text-2xl font-bold text-gray-900">Foydalanuvchilar (Xodimlar)</h1>
           <p className="text-gray-500 mt-1">Do&apos;kon xodimlari ro&apos;yxati va ruxsatlar boshqaruvi</p>
         </div>
-        <button onClick={() => setShowAddForm(!showAddForm)} className="btn-primary">
+        <button onClick={() => {
+          setEditingId(null);
+          setUsername('');
+          setPassword('');
+          setFirstName('');
+          setLastName('');
+          setPhone('');
+          setRole('CASHIER');
+          setShowAddForm(!showAddForm);
+        }} className="btn-primary">
           <Plus size={18} />
           Yangi foydalanuvchi
         </button>
@@ -111,7 +158,13 @@ export default function UsersPage() {
                       </span>
                     </td>
                     <td>
-                      <div className="flex justify-end">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => handleEdit(u)}
+                          className="p-1 text-blue-400 hover:text-blue-600 cursor-pointer"
+                        >
+                          <Edit size={18} />
+                        </button>
                         <button
                           onClick={() => handleDelete(u.id)}
                           className="p-1 text-red-400 hover:text-red-600 cursor-pointer"
@@ -131,7 +184,9 @@ export default function UsersPage() {
         {showAddForm && (
           <div className="card p-6 space-y-6">
             <div>
-              <h2 className="text-lg font-bold text-gray-900">Yangi xodim</h2>
+              <h2 className="text-lg font-bold text-gray-900">
+                {editingId ? 'Xodimni tahrirlash' : 'Yangi xodim'}
+              </h2>
               <p className="text-sm text-gray-500">Xodim ma&apos;lumotlarini to&apos;ldiring</p>
             </div>
 
@@ -170,13 +225,15 @@ export default function UsersPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Parol</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Parol {editingId && <span className="text-gray-400 text-xs font-normal">(O'zgartirish uchun kiriting)</span>}
+                </label>
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="input"
-                  required
+                  required={!editingId}
                 />
               </div>
 
@@ -213,8 +270,12 @@ export default function UsersPage() {
                 >
                   Bekor qilish
                 </button>
-                <button type="submit" className="btn-primary flex-1">
-                  Saqlash
+                <button 
+                  type="submit" 
+                  disabled={createMutation.isPending || updateMutation.isPending}
+                  className="btn-primary flex-1"
+                >
+                  {editingId ? 'Yangilash' : 'Saqlash'}
                 </button>
               </div>
             </form>
