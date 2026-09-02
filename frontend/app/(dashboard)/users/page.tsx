@@ -13,8 +13,25 @@ export default function UsersPage() {
   const [lastName, setLastName] = useState('');
   const [role, setRole] = useState('CASHIER');
   const [phone, setPhone] = useState('');
+  const [isActive, setIsActive] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  const handleError = (error: any) => {
+    const data = error.response?.data;
+    if (data) {
+      if (typeof data === 'string') alert(data);
+      else if (data.message) alert(data.message);
+      else if (data.detail) alert(data.detail);
+      else {
+        const firstError = Object.values(data).flat()[0] as string;
+        if (firstError) alert(`Xatolik: ${firstError}`);
+        else alert("Xatolik yuz berdi.");
+      }
+    } else {
+      alert("Tarmoq xatosi yoki server bilan ulanishda muammo yuz berdi.");
+    }
+  };
 
   const { data, isLoading } = useQuery({
     queryKey: ['users'],
@@ -30,8 +47,10 @@ export default function UsersPage() {
       setFirstName('');
       setLastName('');
       setPhone('');
+      setIsActive(true);
       setShowAddForm(false);
     },
+    onError: handleError,
   });
 
   const updateMutation = useMutation({
@@ -44,9 +63,11 @@ export default function UsersPage() {
       setFirstName('');
       setLastName('');
       setPhone('');
+      setIsActive(true);
       setShowAddForm(false);
       setEditingId(null);
     },
+    onError: handleError,
   });
 
   const deleteMutation = useMutation({
@@ -54,6 +75,7 @@ export default function UsersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
     },
+    onError: handleError,
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -68,6 +90,7 @@ export default function UsersPage() {
       last_name: lastName,
       role,
       phone,
+      is_active: isActive,
     };
 
     if (password) {
@@ -89,6 +112,7 @@ export default function UsersPage() {
     setLastName(user.last_name);
     setRole(user.role);
     setPhone(user.phone || '');
+    setIsActive(user.is_active !== undefined ? user.is_active : true);
     setPassword('');
     setShowAddForm(true);
   };
@@ -115,6 +139,7 @@ export default function UsersPage() {
           setFirstName('');
           setLastName('');
           setPhone('');
+          setIsActive(true);
           setRole('CASHIER');
           setShowAddForm(!showAddForm);
         }} className="btn-primary">
@@ -260,6 +285,19 @@ export default function UsersPage() {
                   className="input"
                   placeholder="+998901234567"
                 />
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
+                <input
+                  type="checkbox"
+                  id="is_active"
+                  checked={isActive}
+                  onChange={(e) => setIsActive(e.target.checked)}
+                  className="w-5 h-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-600 cursor-pointer"
+                />
+                <label htmlFor="is_active" className="text-sm font-medium text-gray-900 cursor-pointer select-none">
+                  Foydalanuvchi faol (Tizimga kira oladi)
+                </label>
               </div>
 
               <div className="flex gap-2">
