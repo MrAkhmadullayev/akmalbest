@@ -1,11 +1,19 @@
 #!/usr/bin/env bash
 # =============================================================================
-#  DigitalOcean Droplet — birinchi sozlash (Ubuntu 24.04)
+#  Server birinchi sozlash (Ubuntu 22.04/24.04)
+#  AWS EC2, DigitalOcean, Hetzner — farqi yo'q, hammasida ishlaydi.
 #
-#  Droplet'ga root sifatida kiring va bir marta ishga tushiring:
-#     ssh root@SERVER_IP
-#     curl -fsSL https://raw.githubusercontent.com/OWNER/REPO/main/scripts/server-setup.sh -o setup.sh
-#     bash setup.sh deploy      # 'deploy' — yaratiladigan foydalanuvchi nomi
+#  AWS EC2 (Ubuntu AMI'da root bilan kirib bo'lmaydi, `ubuntu` useri bor):
+#     scp -i ~/.ssh/id_ed25519 scripts/server-setup.sh ubuntu@<IP>:/tmp/
+#     ssh -i ~/.ssh/id_ed25519 ubuntu@<IP>
+#     sudo bash /tmp/server-setup.sh ubuntu
+#
+#  Root bilan kiriladigan serverlarda (DigitalOcean/Hetzner):
+#     scp scripts/server-setup.sh root@<IP>:/root/
+#     ssh root@<IP> "bash /root/server-setup.sh deploy"
+#
+#  Argument = deploy foydalanuvchi nomi. Mavjud bo'lsa (EC2'dagi `ubuntu`)
+#  faqat docker guruhiga qo'shiladi, yangi bo'lsa to'liq yaratiladi.
 #
 #  Nima qiladi:
 #    1. Tizimni yangilaydi
@@ -65,15 +73,39 @@ if ! id -u "$DEPLOY_USER" >/dev/null 2>&1; then
   echo "$DEPLOY_USER ALL=(ALL) NOPASSWD:ALL" > "/etc/sudoers.d/90-$DEPLOY_USER"
   chmod 440 "/etc/sudoers.d/90-$DEPLOY_USER"
 
-  # root'ning SSH kalitlarini ko'chirish
-  if [ -f /root/.ssh/authorized_keys ]; then
+  # SSH kalitlarini ko'chirish.
+  #
+  # DIQQAT (AWS EC2): u yerda /root/.ssh/authorized_keys BO'SH EMAS, lekin
+  # ichida haqiqiy kalit o'rniga quyidagicha qator turadi:
+  #     command="echo 'Please login as the user \"ubuntu\"...'" ssh-rsa AAAA...
+  # Shu faylni ko'r-ko'rona nusxalasak, yangi foydalanuvchiga kirganda ham
+  # o'sha xabar chiqib SSH darhol uziladi — server'ga umuman kira olmaysiz.
+  # Shuning uchun avval bulut foydalanuvchisining faylini qidiramiz, topilmasa
+  # root'nikini olamiz va `command="..."` prefiksini kesib tashlaymiz.
+  SRC_KEYS=""
+  for candidate in /home/ubuntu/.ssh/authorized_keys \
+                   /home/ec2-user/.ssh/authorized_keys \
+                   /home/admin/.ssh/authorized_keys \
+                   /root/.ssh/authorized_keys; do
+    if [ -s "$candidate" ]; then SRC_KEYS="$candidate"; break; fi
+  done
+
+  if [ -n "$SRC_KEYS" ]; then
+    log "SSH kalitlar manbai: $SRC_KEYS"
     mkdir -p "/home/$DEPLOY_USER/.ssh"
-    cp /root/.ssh/authorized_keys "/home/$DEPLOY_USER/.ssh/authorized_keys"
+    # Har qanday `command="..."` / `no-port-forwarding,...` prefiksini olib
+    # tashlaymiz — faqat `ssh-` yoki `ecdsa-` dan boshlanadigan qismni qoldiramiz.
+    sed -E 's/^.*(ssh-(rsa|ed25519|dss)|ecdsa-sha2-[a-z0-9-]+) /\1 /' "$SRC_KEYS" \
+      | grep -E '^(ssh-|ecdsa-)' > "/home/$DEPLOY_USER/.ssh/authorized_keys"
+
+    if [ ! -s "/home/$DEPLOY_USER/.ssh/authorized_keys" ]; then
+      warn "Kalit ajratib olinmadi — $DEPLOY_USER uchun qo'lda qo'shing!"
+    fi
     chown -R "$DEPLOY_USER:$DEPLOY_USER" "/home/$DEPLOY_USER/.ssh"
     chmod 700 "/home/$DEPLOY_USER/.ssh"
     chmod 600 "/home/$DEPLOY_USER/.ssh/authorized_keys"
   else
-    warn "/root/.ssh/authorized_keys topilmadi — SSH kalitni qo'lda qo'shing!"
+    warn "Hech qaysi authorized_keys topilmadi — SSH kalitni qo'lda qo'shing!"
   fi
 else
   log "Foydalanuvchi mavjud: $DEPLOY_USER"
@@ -147,24 +179,37 @@ log "TAYYOR"
 cat <<EOF
 
 Keyingi qadamlar:
-  1. Chiqing va yangi foydalanuvchi bilan kiring:
+  1. Chiqing va QAYTA kiring (docker guruhi faqat yangi sessiyada kuchga kiradi):
+       exit
        ssh $DEPLOY_USER@<SERVER_IP>
+       docker ps        # sudo'siz ishlashi kerak
 
-  2. Reponi kloning qiling:
-       git clone https://github.com/<OWNER>/<REPO>.git $APP_DIR
+  2. Private repo uchun deploy key yarating va GitHub'ga qo'shing:
+       ssh-keygen -t ed25519 -f ~/.ssh/github_deploy -N "" -C "alkagol-server"
+       cat ~/.ssh/github_deploy.pub
+       # GitHub -> repo -> Settings -> Deploy keys -> Add (write ruxsati SHART EMAS)
+       printf 'Host github.com\n  IdentityFile ~/.ssh/github_deploy\n  IdentitiesOnly yes\n' >> ~/.ssh/config
+
+  3. Reponi kloning qiling (SSH orqali, HTTPS emas):
+       git clone git@github.com:<OWNER>/<REPO>.git $APP_DIR
        cd $APP_DIR
 
-  3. .env tayyorlang:
-       cp .env.example .env && nano .env
-       # SECRET_KEY:  openssl rand -base64 48
-       # DOMAIN, POSTGRES_PASSWORD, IMAGE_OWNER ni to'ldiring
+  4. .env tayyorlang:
+       cp .env.example .env
+       python3 -c "import secrets; print(secrets.token_urlsafe(64))"   # SECRET_KEY
+       nano .env
+       # To'ldirish SHART: SECRET_KEY, DOMAIN, ACME_EMAIL, POSTGRES_PASSWORD,
+       #   ALLOWED_HOSTS, CSRF_TRUSTED_ORIGINS, IMAGE_OWNER (KICHIK harflarda!)
+       # RAM 1 GB yoki kamroq bo'lsa: LOWMEM=1
+       chmod 600 .env
 
-  4. GHCR'ga login (private repo bo'lsa):
+  5. GHCR'ga login (private repo bo'lsa):
+       # GitHub -> Settings -> Developer settings -> Tokens (classic) -> read:packages
        echo <GITHUB_PAT> | docker login ghcr.io -u <USERNAME> --password-stdin
 
-  5. Ishga tushiring:
-       docker compose -f docker-compose.prod.yml up -d
+  6. Ishga tushiring:
+       ./scripts/deploy.sh latest
 
-  6. Domen A-record serverga qarab turgach:
+  7. Domen A-record serverga qarab turgach:
        ./scripts/init-letsencrypt.sh
 EOF

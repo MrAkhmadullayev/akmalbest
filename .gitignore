@@ -12,6 +12,16 @@
 *.crt
 secrets/
 
+# SSH kalitlar — hech qachon repoga tushmasin.
+# `ssh-keygen -f mac` kabi buyruqlar kalitni joriy papkaga yozadi, shuning
+# uchun kengaytmasiz nomlarni ham qo'lda bloklaymiz.
+id_rsa*
+id_ed25519*
+id_ecdsa*
+*.ppk
+mac
+mac.pub
+
 # ---------- Python / Django ----------
 __pycache__/
 *.py[cod]

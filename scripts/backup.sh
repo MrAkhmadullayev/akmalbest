@@ -12,6 +12,9 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 COMPOSE="docker compose -f docker-compose.prod.yml"
+if grep -qE '^LOWMEM=1' .env 2>/dev/null && [ -f docker-compose.lowmem.yml ]; then
+  COMPOSE="$COMPOSE -f docker-compose.lowmem.yml"
+fi
 BACKUP_DIR="./backups"
 RETENTION_DAYS="${RETENTION_DAYS:-14}"
 STAMP="$(date +%Y-%m-%d_%H%M)"

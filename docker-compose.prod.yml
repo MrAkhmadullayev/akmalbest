@@ -1,5 +1,5 @@
 # =============================================================================
-#  ALKAGOL — PRODUCTION (DigitalOcean Droplet)
+#  ALKAGOL — PRODUCTION (bitta Linux server: AWS EC2, DO, Hetzner...)
 #
 #    docker compose -f docker-compose.prod.yml up -d
 #

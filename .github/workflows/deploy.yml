@@ -1,12 +1,14 @@
-name: Deploy to DigitalOcean
+name: Deploy to production
 
-# main'ga har push -> image'lar GHCR'ga yig'iladi -> droplet'ga SSH orqali deploy.
+# main'ga har push -> image'lar GHCR'ga yig'iladi -> serverga SSH orqali deploy.
+# Bulut provayderiga bog'liq emas: AWS EC2, DigitalOcean, Hetzner — bir xil.
 #
 # Kerakli GitHub Secrets (Settings -> Secrets and variables -> Actions):
-#   DO_HOST         droplet IP manzili
-#   DO_USER         deploy foydalanuvchi nomi (masalan: deploy)
-#   DO_SSH_KEY      shu foydalanuvchi uchun PRIVATE SSH kalit (to'liq matn)
-#   DO_SSH_PORT     ixtiyoriy, default 22
+#   SSH_HOST        server IP (AWS'da Elastic IP) yoki DNS nomi
+#   SSH_USER        deploy foydalanuvchi nomi (EC2 Ubuntu'da: ubuntu)
+#   SSH_KEY         shu foydalanuvchi uchun PRIVATE SSH kalit (to'liq matn,
+#                   "-----BEGIN..." va "-----END..." qatorlari bilan birga)
+#   SSH_PORT        ixtiyoriy, default 22
 #
 # GHCR uchun qo'shimcha secret KERAK EMAS — GITHUB_TOKEN yetarli.
 
@@ -111,7 +113,7 @@ jobs:
 
   # ----------------------------------------------------------------- Deploy
   deploy:
-    name: Droplet'ga deploy
+    name: Serverga deploy
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: build
@@ -124,11 +126,35 @@ jobs:
 
     steps:
       - name: SSH kalitni sozlash
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          SSH_PORT: ${{ secrets.SSH_PORT || 22 }}
         run: |
+          # Secret yetishmasa `ssh-keyscan` tushunarsiz "exit code 1" beradi.
+          # Shuning uchun avval aniq xabar bilan to'xtaymiz.
+          missing=""
+          [ -n "$SSH_HOST" ] || missing="$missing SSH_HOST"
+          [ -n "$SSH_USER" ] || missing="$missing SSH_USER"
+          [ -n "$SSH_KEY"  ] || missing="$missing SSH_KEY"
+          if [ -n "$missing" ]; then
+            echo "::error::Quyidagi GitHub Secrets o'rnatilmagan:$missing"
+            echo "Settings -> Secrets and variables -> Actions -> New repository secret"
+            exit 1
+          fi
+
           mkdir -p ~/.ssh
-          echo "${{ secrets.DO_SSH_KEY }}" > ~/.ssh/id_ed25519
+          # printf '%s\n' — `echo` ba'zi qobiqlarda `\n` ni talqin qiladi va
+          # PEM kalitni buzadi.
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -p "${{ secrets.DO_SSH_PORT || 22 }}" -H "${{ secrets.DO_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+          if ! ssh-keyscan -p "$SSH_PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null; then
+            echo "::error::$SSH_HOST:$SSH_PORT ga ulanib bo'lmadi."
+            echo "Tekshiring: server ishlayaptimi, Security Group'da 22-port ochiqmi."
+            exit 1
+          fi
 
       - name: Deploy
         env:
@@ -144,8 +170,8 @@ jobs:
           # bu login serverdagi doimiy PAT login'ini (~/.docker/config.json)
           # o'chirib yuboradi va keyingi QO'LDA `docker pull` ishlamay qoladi.
           # GITHUB_TOKEN job tugashi bilan bekor bo'ladi.
-          printf '%s' "$GHCR_TOKEN" | ssh -p "${{ secrets.DO_SSH_PORT || 22 }}" \
-              "${{ secrets.DO_USER }}@${{ secrets.DO_HOST }}" \
+          printf '%s' "$GHCR_TOKEN" | ssh -p "${{ secrets.SSH_PORT || 22 }}" \
+              "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
               "set -eu
                cd /opt/alkagol
                git fetch --all --tags --quiet

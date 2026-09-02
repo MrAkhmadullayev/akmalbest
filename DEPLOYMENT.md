@@ -1,7 +1,7 @@
 # Alkagol — Deploy qo'llanmasi
 
 Nol holatdan HTTPS'da ishlaydigan, CI/CD bilan avtomatlashtirilgan tizimgacha.
-Ketma-ketlik: **lokal tekshiruv → GitHub → DigitalOcean droplet → domen → HTTPS → CI/CD**.
+Ketma-ketlik: **lokal tekshiruv → GitHub → AWS EC2 → domen → HTTPS → CI/CD**.
 
 Har bir bosqichni tugatmasdan keyingisiga o'tmang — keyingi bosqich oldingisining
 natijasiga tayanadi.
@@ -10,7 +10,7 @@ natijasiga tayanadi.
 
 ## 0. Arxitektura
 
-Bitta Ubuntu droplet ichida Docker Compose orqali 7 ta konteyner ishlaydi:
+Bitta Ubuntu serverda Docker Compose orqali 7 ta konteyner ishlaydi:
 
 ```
                         Internet
@@ -40,8 +40,8 @@ Frontend brauzerga `/api` (nisbiy yo'l) bilan chiqadi, ya'ni so'rov o'zi turgan
 domenga ketadi. Shu sababli **CORS umuman kerak emas** va preflight so'rovlar
 yo'qoladi. Postgres va Redis portlari tashqariga **umuman ochilmaydi** — faqat
 Docker ichki tarmog'ida ko'rinadi. Image'lar serverda emas, **GitHub Actions'da
-build qilinadi** va GHCR'ga push qilinadi; droplet faqat tayyor image'ni tortadi.
-2 GB RAM'li dropletda `next build` xotira yetishmasligidan o'lishi mumkin, shuning
+build qilinadi** va GHCR'ga push qilinadi; server faqat tayyor image'ni tortadi.
+Kichik serverda `next build` xotira yetishmasligidan o'lishi mumkin, shuning
 uchun bu ataylab shunday.
 
 ---
@@ -170,85 +170,126 @@ kerak emas.
 
 ---
 
-## 3. DigitalOcean droplet
+## 3. AWS EC2 server
 
-### 3.1. Droplet yaratish
+### 3.0. Lokal SSH kaliti
 
-DigitalOcean panelida: **Create → Droplets**
+Kalit yo'q bo'lsa avval yarating (passphrase **bo'sh** bo'lishi shart — CI/CD
+avtomatik ulanadi, parol so'ralsa deploy to'xtaydi):
+
+```bash
+ssh-keygen -t ed25519 -C "alkagol-deploy" -f ~/.ssh/id_ed25519 -N ""
+cat ~/.ssh/id_ed25519.pub
+```
+
+### 3.1. Instance yaratish
+
+EC2 konsolida: **Launch instance**
 
 | Parametr | Tanlov | Izoh |
 |---|---|---|
-| Image | Ubuntu 24.04 LTS x64 | |
-| Plan | Basic → Regular → **2 GB / 2 vCPU / 60 GB** | $18/oy. 1 GB ham ishlaydi, lekin siqiq |
-| Datacenter | Frankfurt yoki Amsterdam | O'zbekistonga eng past kechikish |
-| Authentication | **SSH Key** | Parol emas — xavfsizroq |
-| Hostname | `alkagol-prod` | |
+| Name | `alkagol-prod` | |
+| AMI | **Ubuntu Server 24.04 LTS (64-bit x86)** | ARM/Graviton'ni TANLAMANG — pastdagi izohga qarang |
+| Instance type | **t3.micro** | 1 GB RAM, Free Tier'da 12 oy bepul |
+| Key pair | yangi yarating yoki mavjudini tanlang | "Import key pair" bilan yuqoridagi `.pub` ni yuklang |
+| Network → Auto-assign public IP | **Enable** | |
+| Security group | quyidagi jadval | |
+| Storage | **30 GB gp3** | Free Tier chegarasi aynan 30 GB |
 
-Qo'shimcha: **Enable backups** ($3.6/oy) — tavsiya qilinadi.
+**Nega x86:** `t4g` tipidagi instance'lar ARM protsessorda ishlaydi. Bizning
+Docker image'lar GitHub Actions'da `linux/amd64` uchun yig'iladi va ARM
+mashinada `exec format error` beradi. Agar keyinchalik ARM'ga o'tmoqchi
+bo'lsangiz ayting — CI'ni multi-arch build'ga o'tkazaman.
+
+**Security group qoidalari** (Inbound):
+
+| Type | Port | Source | Izoh |
+|---|---|---|---|
+| SSH | 22 | **My IP** | Faqat sizning IP'ingiz. Internet-provayder IP'ni o'zgartirsa yangilash kerak |
+| HTTP | 80 | `0.0.0.0/0` | Let's Encrypt tekshiruvi uchun ochiq bo'lishi SHART |
+| HTTPS | 443 | `0.0.0.0/0` | |
+
+PostgreSQL (5432) va Redis (6379) uchun qoida **qo'shmang** — ular faqat
+konteynerlar ichki tarmog'ida ishlaydi.
+
+### 3.1a. Elastic IP (majburiy)
+
+EC2'ning oddiy public IP'si instance to'xtab-ishga tushganda **o'zgaradi**.
+DNS yozuvi va GitHub secret eski IP'ga qarab qolsa sayt o'chadi. Shuning uchun:
+
+**EC2 → Elastic IPs → Allocate Elastic IP address → Actions → Associate** →
+instance'ni tanlang.
+
+Elastic IP instance'ga biriktirilgan holda bepul. Biriktirilmasdan bo'sh
+turgani uchun AWS pul oladi, shuning uchun keraksiz bo'lsa **Release** qiling.
+
+Shu IP butun qo'llanmada `<SERVER_IP>` deb yuritiladi.
 
 ### 3.2. Serverni sozlash
 
-Droplet IP'sini oling va root sifatida kiring:
-
-```bash
-ssh root@<DROPLET_IP>
-```
-
-Sozlash skriptini serverga ko'chiring. Repo **private** bo'lgani uchun uni
-`curl` bilan yuklab bo'lmaydi — lokal kompyuteringizdan `scp` qiling:
+EC2 Ubuntu AMI'da `root` bilan to'g'ridan-to'g'ri kirib bo'lmaydi — `ubuntu`
+foydalanuvchisi ishlatiladi.
 
 ```bash
 # LOKAL terminalda:
-scp scripts/server-setup.sh root@<DROPLET_IP>:/root/
+cd ~/Desktop/Projects/alkagol
+ssh ubuntu@<SERVER_IP> "echo ulanish OK"
+scp scripts/server-setup.sh ubuntu@<SERVER_IP>:/tmp/
+ssh ubuntu@<SERVER_IP> "sudo bash /tmp/server-setup.sh ubuntu"
 ```
 
-Keyin serverda ishga tushiring — u Docker, `deploy` foydalanuvchisi, UFW,
-fail2ban, 2 GB swap va cron vazifalarini o'rnatadi:
+Oxirgi argument `ubuntu` — ya'ni yangi foydalanuvchi yaratilmaydi, mavjud
+`ubuntu` foydalanuvchisi docker guruhiga qo'shiladi. Bu EC2'da eng sodda yo'l.
+
+Skript 3–5 daqiqada: tizimni yangilaydi, Docker Engine + Compose plugin
+o'rnatadi, UFW'da faqat 22/80/443 ni ochadi (Security Group ustiga ikkinchi
+himoya qatlami), fail2ban va `unattended-upgrades` ni yoqadi, RAM hajmiga
+qarab 2 GB swap yaratadi, `/opt/alkagol` papkasini tayyorlaydi va kunlik
+backup cron'ini qo'yadi.
+
+Tugagach **albatta chiqib qayta kiring** — `docker` guruhiga a'zolik faqat
+yangi sessiyada kuchga kiradi:
 
 ```bash
-bash /root/server-setup.sh
-```
-
-Skript nima qiladi: tizimni yangilaydi, Docker Engine + Compose plugin o'rnatadi,
-`deploy` nomli sudo foydalanuvchi yaratib unga SSH kalitingizni ko'chiradi, UFW'da
-faqat 22/80/443 portlarni ochadi, fail2ban'ni yoqadi, 2 GB swap fayl yaratadi
-(kichik dropletda OOM'dan saqlaydi), `unattended-upgrades` ni yoqadi va
-`/opt/alkagol` papkasini tayyorlaydi.
-
-Tugagach `deploy` foydalanuvchisi bilan kiring:
-
-```bash
-exit
-ssh deploy@<DROPLET_IP>
+ssh ubuntu@<SERVER_IP>
+docker ps        # `sudo` siz ishlashi kerak
+free -h          # swap ko'rinishi kerak
 ```
 
 ### 3.3. Serverda deploy kaliti (private repo uchun)
 
 Server private repo'ni klon qilishi uchun unga o'qish huquqi kerak.
-**Deploy key** eng xavfsiz variant — u faqat shu bitta repo'ga tegishli.
+**Deploy key** eng xavfsiz variant — u faqat shu bitta repo'ga tegishli va
+akkauntingizning qolgan repolariga tegmaydi.
 
 Serverda:
 
 ```bash
-ssh-keygen -t ed25519 -C "alkagol-droplet" -f ~/.ssh/id_ed25519 -N ""
-cat ~/.ssh/id_ed25519.pub
+ssh-keygen -t ed25519 -C "alkagol-server" -f ~/.ssh/github_deploy -N ""
+printf 'Host github.com\n  IdentityFile ~/.ssh/github_deploy\n  IdentitiesOnly yes\n' >> ~/.ssh/config
+cat ~/.ssh/github_deploy.pub
 ```
 
+Kalitni alohida faylga yozayapmiz (`id_ed25519` emas), chunki `id_ed25519`
+keyinroq boshqa maqsadda kerak bo'lishi mumkin va ikkalasi aralashib ketmasin.
+`~/.ssh/config` git'ga qaysi kalitni ishlatishni aytadi.
+
 Chiqqan matnni nusxa oling → GitHub → repo → **Settings → Deploy keys →
-Add deploy key** → Title: `droplet`, Key: yopishtiring, **Allow write access
+Add deploy key** → Title: `aws-ec2`, Key: yopishtiring, **Allow write access
 BELGILAMANG** → Add key.
 
 Tekshirish:
 
 ```bash
-ssh -T git@github.com     # "Hi <USERNAME>/alkagol! You've successfully authenticated"
+ssh -T git@github.com
+# "Hi MrAkhmadullayev/akmalbest! You've successfully authenticated..."
 ```
 
 ### 3.4. Repo'ni klon qilish
 
 ```bash
-sudo chown -R deploy:deploy /opt/alkagol
-git clone git@github.com:<USERNAME>/alkagol.git /opt/alkagol
+sudo chown -R ubuntu:ubuntu /opt/alkagol
+git clone git@github.com:MrAkhmadullayev/akmalbest.git /opt/alkagol
 cd /opt/alkagol
 ```
 
@@ -276,11 +317,24 @@ POSTGRES_PASSWORD=<kuchli parol>
 ADMIN_URL=<oddiy "admin" emas — masalan boshqaruv-7f3a>
 ENABLE_API_DOCS=False                  # prod'da Swagger yopiq
 
-IMAGE_OWNER=<github-username>          # kichik harflar bilan!
+IMAGE_OWNER=mrakhmadullayev            # kichik harflar bilan!
 IMAGE_TAG=latest
 
-GUNICORN_WORKERS=5                     # 2 vCPU uchun (2*2)+1
+LOWMEM=1                               # t3.micro (1 GB) uchun — pastga qarang
+GUNICORN_WORKERS=1                     # LOWMEM=1 bo'lsa baribir 1 ga majburlanadi
 ```
+
+**`LOWMEM` haqida.** RAM 1 GB yoki undan kam bo'lsa `LOWMEM=1` qiling. Shunda
+barcha skriptlar `docker-compose.lowmem.yml` ni avtomatik qo'shadi va
+konfiguratsiya siqiladi: Postgres `shared_buffers` 128 MB dan 16 MB ga tushadi,
+Redis snapshot'ni o'chiradi (fork paytida xotira ikkilanmasin), Gunicorn 3 ta
+worker o'rniga 1 worker + 8 thread ishlatadi, `celery_beat` alohida konteyner
+sifatida ishga tushmay worker ichiga ko'chadi (~100 MB tejaydi), certbot demoni
+o'chadi va sertifikat yangilash faqat haftalik cron orqali bo'ladi.
+
+Keyinchalik instance tipini `t3.small` ga (2 GB) oshirsangiz `LOWMEM=0` qilib
+`./scripts/deploy.sh latest` ni qayta ishga tushiring — hech narsani
+o'chirish yoki qayta yozish shart emas.
 
 `SECRET_KEY` ni serverda generatsiya qilish:
 
@@ -317,7 +371,7 @@ echo '<TOKEN>' | docker login ghcr.io -u <USERNAME> --password-stdin
 ### 3.7. Birinchi ishga tushirish
 
 Prod compose faqat tayyor image'lar bilan ishlaydi (`build:` bloklari yo'q —
-2 GB dropletda `next build` xotira yetishmasligidan o'ladi). Shuning uchun avval
+t3.micro'da `next build` xotira yetishmasligidan o'ladi). Shuning uchun avval
 GitHub Actions image'larni yig'ib berishi kerak.
 
 `main` ga push qilingandan keyin Actions tab'ida `Deploy` workflow'ning **build**
@@ -351,7 +405,7 @@ Superuser yarating:
 docker compose -f docker-compose.prod.yml exec backend python manage.py createsuperuser
 ```
 
-Endi <http://DROPLET_IP> da ilova ochilishi kerak (brauzer sertifikat haqida
+Endi <http://SERVER_IP> da ilova ochilishi kerak (brauzer sertifikat haqida
 ogohlantiradi — bu normal, 5-bo'limdan keyin yo'qoladi).
 
 ---
@@ -360,17 +414,17 @@ ogohlantiradi — bu normal, 5-bo'limdan keyin yo'qoladi).
 
 ### 4.1. DNS yozuvlari
 
-Domen registratoringiz panelida (yoki DigitalOcean → Networking → Domains):
+Domen registratoringiz panelida (yoki AWS Route 53 → Hosted zones):
 
 | Turi | Nom | Qiymat | TTL |
 |---|---|---|---|
-| A | `@` | `<DROPLET_IP>` | 3600 |
-| A | `www` | `<DROPLET_IP>` | 3600 |
+| A | `@` | `<SERVER_IP>` | 3600 |
+| A | `www` | `<SERVER_IP>` | 3600 |
 
 Tarqalishini kuting (odatda 5–30 daqiqa) va tekshiring:
 
 ```bash
-dig +short alkagol.uz        # DROPLET_IP chiqishi kerak
+dig +short alkagol.uz        # SERVER_IP chiqishi kerak
 dig +short www.alkagol.uz
 ```
 
@@ -443,10 +497,16 @@ Repo → **Settings → Secrets and variables → Actions → Secrets → New re
 
 | Nom | Qiymat |
 |---|---|
-| `DO_HOST` | droplet IP manzili |
-| `DO_USER` | `deploy` |
-| `DO_SSH_KEY` | **private** kalit (butun matn, `-----BEGIN` dan `-----END` gacha) |
-| `DO_SSH_PORT` | `22` (SSH portini o'zgartirgan bo'lsangiz — o'shani) |
+| `SSH_HOST` | serverning **Elastic IP** manzili |
+| `SSH_USER` | `ubuntu` (EC2 Ubuntu AMI'da) |
+| `SSH_KEY` | **private** kalit (butun matn, `-----BEGIN` dan `-----END` gacha) |
+| `SSH_PORT` | `22` (SSH portini o'zgartirgan bo'lsangiz — o'shani) |
+
+> Security group'da 22-portni "My IP" ga cheklagan bo'lsangiz, GitHub Actions
+> runner'i boshqa IP'dan keladi va ulanolmaydi. Ikki yo'l bor: 22-portni
+> `0.0.0.0/0` ga ochish (fail2ban va parolsiz kalit himoya qiladi), yoki
+> AWS'ning GitHub Actions IP diapazonlarini qo'shish. Sodda yechim —
+> birinchisi.
 
 `GITHUB_TOKEN` avtomatik beriladi — qo'lda qo'shmaysiz.
 
@@ -457,9 +517,9 @@ CI uchun alohida kalit juftligi yarating (shaxsiy kalitingizni bermang):
 ssh-keygen -t ed25519 -C "github-actions" -f ~/.ssh/alkagol_ci -N ""
 
 # Public kalitni serverga qo'shing:
-ssh-copy-id -i ~/.ssh/alkagol_ci.pub deploy@<DROPLET_IP>
+ssh-copy-id -i ~/.ssh/alkagol_ci.pub ubuntu@<SERVER_IP>
 
-# Private kalitni GitHub secret DO_SSH_KEY ga yopishtiring:
+# Private kalitni GitHub secret SSH_KEY ga yopishtiring (butun matn):
 cat ~/.ssh/alkagol_ci
 ```
 
@@ -525,7 +585,7 @@ Nightly cron `scripts/backup.sh` ni ishga tushiradi (`pg_dump | gzip`,
 ls -lh backups/
 ```
 
-Backupni tashqariga ko'chiring — droplet o'lsa backup ham o'ladi:
+Backupni tashqariga ko'chiring — server o'lsa backup ham o'ladi:
 
 ```bash
 # LOKAL kompyuterda:
@@ -606,5 +666,5 @@ docker compose -f docker-compose.prod.yml up -d --no-build
 - [ ] `manage.py check --deploy` → 0 ta ERROR
 - [ ] SSL Labs → A yoki A+
 - [ ] Backup ishlayotgani tekshirilgan va tashqariga ko'chirilgan
-- [ ] DigitalOcean backups yoqilgan
+- [ ] EC2 snapshot yoki AWS Backup yoqilgan
 - [ ] GHCR tokeni faqat `read:packages` huquqiga ega

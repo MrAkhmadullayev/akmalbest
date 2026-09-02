@@ -102,7 +102,7 @@ alkagol/
 │   ├── dev.conf             lokal (HTTP)
 │   └── templates/           prod (TLS, HSTS, rate limit, envsubst)
 ├── scripts/
-│   ├── server-setup.sh      droplet bootstrap: Docker, UFW, swap, cron
+│   ├── server-setup.sh      server bootstrap: Docker, UFW, swap, cron
 │   ├── init-letsencrypt.sh  birinchi sertifikat
 │   ├── deploy.sh            pull -> restart -> health -> rollback
 │   ├── backup.sh            pg_dump + 14 kunlik saqlash
@@ -153,7 +153,7 @@ Eng muhimlari:
 
 To'liq qo'llanma: **[DEPLOYMENT.md](DEPLOYMENT.md)**
 
-Qisqacha: GitHub (private) → DigitalOcean droplet + Docker Compose → domen →
+Qisqacha: GitHub (private) → AWS EC2 + Docker Compose → domen →
 Let's Encrypt → GitHub Actions orqali avtomatik deploy.
 
 `main` ga push qilinganda CI test qiladi, image'larni GHCR'ga push qiladi va
