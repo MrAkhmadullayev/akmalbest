@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-#  Server birinchi sozlash (Ubuntu 22.04/24.04)
+#  Server birinchi sozlash (Ubuntu 22.04 / 24.04 / 26.04)
 #  AWS EC2, DigitalOcean, Hetzner — farqi yo'q, hammasida ishlaydi.
 #
 #  AWS EC2 (Ubuntu AMI'da root bilan kirib bo'lmaydi, `ubuntu` useri bor):
@@ -46,8 +46,25 @@ if ! command -v docker >/dev/null 2>&1; then
   install -m 0755 -d /etc/apt/keyrings
   curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
   chmod a+r /etc/apt/keyrings/docker.asc
+
+  # Docker o'z apt repozitoriysini har bir Ubuntu relizi uchun ALOHIDA chiqaradi
+  # va yangi reliz chiqqach bir necha oy kechikadi. Masalan 26.04 ("resolute")
+  # uchun paket hali bo'lmasligi mumkin — u holda `apt-get update` 404 beradi va
+  # butun skript shu yerda yiqiladi.
+  #
+  # Shuning uchun avval repo'da shu kodnom borligini tekshiramiz, bo'lmasa
+  # oxirgi ma'lum LTS paketlariga tushamiz. Docker paketlari relizlar orasida
+  # mos keladi, ya'ni 26.04 da "noble" (24.04) paketi bemalol ishlaydi.
+  CODENAME="$(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")"
+  if ! curl -fsI --max-time 15 \
+       "https://download.docker.com/linux/ubuntu/dists/$CODENAME/Release" >/dev/null 2>&1; then
+    warn "Docker repo'da '$CODENAME' hali yo'q — 'noble' (24.04) paketlari ishlatiladi"
+    CODENAME=noble
+  fi
+  log "Docker apt suite: $CODENAME"
+
   echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] \
-https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
+https://download.docker.com/linux/ubuntu $CODENAME stable" \
     > /etc/apt/sources.list.d/docker.list
   apt-get update -qq
   apt-get install -y -qq docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
