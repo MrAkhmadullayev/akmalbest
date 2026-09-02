@@ -37,6 +37,13 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
+  useEffect(() => {
+    // Mobil qurilmalarda yon panelni yopiq holatda boshlash
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setSidebarOpen(false);
+    }
+  }, []);
+
   const { data: unreadData } = useQuery({
     queryKey: ['notifications-unread'],
     queryFn: () => notificationsService.getUnreadCount(),

@@ -11,19 +11,17 @@ import { formatCurrency } from '@/lib/utils';
 import {
   Search, Trash2, Plus, Minus, X,
   Banknote, CreditCard, Clock, Check,
-  Printer, User as UserIcon,
+  Printer,
 } from 'lucide-react';
-import type { Customer, Product } from '@/types';
+import type { Product } from '@/types';
 
 export default function POSPage() {
-  const { user } = useAuth();
   const queryClient = useQueryClient();
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const [barcodeInput, setBarcodeInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CARD' | 'DEBT'>('CASH');
   const [paidAmount, setPaidAmount] = useState('');
   const [dueDate, setDueDate] = useState('');
@@ -91,7 +89,6 @@ export default function POSPage() {
       setCompletedSale(data);
       setSuccessMsg('Savdo muvaffaqiyatli yakunlandi!');
       cart.clearCart();
-      setSelectedCustomer(null);
       setShowPayment(false);
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       setTimeout(() => {
@@ -202,9 +199,9 @@ export default function POSPage() {
       : 0;
 
   return (
-    <div className="flex h-full bg-gray-50 dark:bg-gray-950 transition-colors duration-200">
+    <div className="flex flex-col lg:flex-row h-full min-h-screen lg:min-h-0 bg-gray-50 dark:bg-gray-950 transition-colors duration-200">
       {/* Left Panel - Cart */}
-      <div className="flex-1 flex flex-col p-4 lg:p-6">
+      <div className="flex-1 flex flex-col p-3 lg:p-6 min-h-[60vh] lg:min-h-0">
         {/* Barcode Input */}
         <div className="mb-4 space-y-3">
           <div className="flex gap-3">
@@ -310,7 +307,7 @@ export default function POSPage() {
             )}
           </div>
 
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-auto">
             {cart.items.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-gray-400">
                 <ShoppingCartEmpty />
@@ -318,8 +315,9 @@ export default function POSPage() {
                 <p className="text-sm">Mahsulot qo&apos;shish uchun shtrix-kodni skanerlang</p>
               </div>
             ) : (
-              <table className="data-table">
-                <thead>
+              <div className="min-w-[600px] pb-4">
+                <table className="data-table w-full">
+                  <thead>
                   <tr>
                     <th>Mahsulot</th>
                     <th className="text-center">Narx</th>
@@ -385,15 +383,16 @@ export default function POSPage() {
                       </td>
                     </tr>
                   ))}
-                </tbody>
-              </table>
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </div>
       </div>
 
       {/* Right Panel - Totals & Payment */}
-      <div className="w-80 lg:w-96 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 flex flex-col p-5">
+      <div className="w-full lg:w-96 bg-white dark:bg-gray-900 border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-gray-800 flex flex-col p-4 lg:p-5 shrink-0">
         {/* Totals */}
         <div className="space-y-3 mb-6">
           <div className="flex justify-between text-sm">
