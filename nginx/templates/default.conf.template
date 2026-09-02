@@ -1,0 +1,159 @@
+# =============================================================================
+#  Nginx — PRODUCTION (HTTPS + Let's Encrypt)
+#
+#  Bu TEMPLATE. nginx:alpine image ishga tushganda envsubst orqali ${DOMAIN}
+#  o'rniga haqiqiy domen qo'yiladi ($host, $uri kabi nginx o'zgaruvchilariga
+#  tegilmaydi — ular env emas).
+#
+#  Sertifikatlar: scripts/init-letsencrypt.sh birinchi marta oladi,
+#  certbot konteyneri esa har 12 soatda yangilab turadi.
+# =============================================================================
+
+upstream alkagol_backend {
+    server backend:8000;
+    keepalive 32;
+}
+
+upstream alkagol_frontend {
+    server frontend:3000;
+    keepalive 32;
+}
+
+limit_req_zone $binary_remote_addr zone=login_limit:10m rate=10r/m;
+limit_req_zone $binary_remote_addr zone=api_limit:10m rate=30r/s;
+
+# --------------------------------------------------------------------- HTTP
+# Faqat ACME challenge + HTTPS'ga redirect
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${DOMAIN} www.${DOMAIN};
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# --------------------------------------------------------------------- HTTPS
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name ${DOMAIN} www.${DOMAIN};
+
+    # ------------------------------------------------------------------ TLS
+    ssl_certificate     /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+    ssl_session_tickets off;
+    ssl_stapling on;
+    ssl_stapling_verify on;
+    # Docker ichki DNS — OCSP stapling va upstream resolve uchun
+    resolver 127.0.0.11 valid=30s ipv6=off;
+
+    # -------------------------------------------------------------- Headers
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Content-Type-Options    "nosniff" always;
+    add_header X-Frame-Options           "SAMEORIGIN" always;
+    add_header Referrer-Policy           "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy        "camera=(), microphone=(), geolocation=()" always;
+
+    server_tokens off;
+    client_max_body_size 25M;
+
+    # ----------------------------------------------------------------- Gzip
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_comp_level 5;
+    gzip_proxied any;
+    gzip_types text/plain text/css text/javascript application/javascript
+               application/json application/xml image/svg+xml font/woff2;
+
+    # ------------------------------------------------------------ Certbot
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    # -------------------------------------------------------------- Health
+    location = /api/health/ {
+        proxy_pass http://alkagol_backend;
+        include /etc/nginx/proxy_params_alkagol.conf;
+        access_log off;
+    }
+
+    # ------------------------------------------------------- Login (limit)
+    location = /api/auth/login/ {
+        limit_req zone=login_limit burst=5 nodelay;
+        proxy_pass http://alkagol_backend;
+        include /etc/nginx/proxy_params_alkagol.conf;
+    }
+
+    # ----------------------------------------------------------------- API
+    location /api/ {
+        limit_req zone=api_limit burst=60 nodelay;
+        proxy_pass http://alkagol_backend;
+        include /etc/nginx/proxy_params_alkagol.conf;
+    }
+
+    # -------------------------------------------------------- Django admin
+    location /${ADMIN_URL}/ {
+        proxy_pass http://alkagol_backend;
+        include /etc/nginx/proxy_params_alkagol.conf;
+    }
+
+    # ------------------------------------------------- Static (WhiteNoise)
+    location /static/ {
+        proxy_pass http://alkagol_backend;
+        include /etc/nginx/proxy_params_alkagol.conf;
+        access_log off;
+    }
+
+    # -------------------------------------------------------------- Media
+    # DIQQAT: location ichida `add_header` bo'lsa, server darajasidagi BARCHA
+    # add_header'lar shu blok uchun MEROS QILIB OLINMAYDI (nginx qoidasi).
+    # Shuning uchun xavfsizlik sarlavhalarini bu yerda takrorlaymiz.
+    location /media/ {
+        alias /var/www/media/;
+        expires 7d;
+
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        add_header X-Content-Type-Options    "nosniff" always;
+        add_header X-Frame-Options           "SAMEORIGIN" always;
+        add_header Referrer-Policy           "strict-origin-when-cross-origin" always;
+        add_header Permissions-Policy        "camera=(), microphone=(), geolocation=()" always;
+        add_header Cache-Control             "public";
+
+        access_log off;
+    }
+
+    # ------------------------------------------------------------ Next.js
+    location /_next/static/ {
+        proxy_pass http://alkagol_frontend;
+        include /etc/nginx/proxy_params_alkagol.conf;
+        expires 365d;
+
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        add_header X-Content-Type-Options    "nosniff" always;
+        add_header X-Frame-Options           "SAMEORIGIN" always;
+        add_header Referrer-Policy           "strict-origin-when-cross-origin" always;
+        add_header Permissions-Policy        "camera=(), microphone=(), geolocation=()" always;
+        add_header Cache-Control             "public, immutable";
+
+        access_log off;
+    }
+
+    location / {
+        proxy_pass http://alkagol_frontend;
+        include /etc/nginx/proxy_params_alkagol.conf;
+    }
+}

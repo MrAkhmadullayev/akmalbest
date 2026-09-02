@@ -1,0 +1,26 @@
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+exclude = [
+    "migrations",
+    "venv",
+    ".venv",
+    "staticfiles",
+    "media",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "DJ"]
+ignore = [
+    "E501",   # qator uzunligi — formatter hal qiladi
+    "B008",   # DRF/Django'da funksiya chaqiruvi default sifatida normal
+]
+
+[tool.ruff.lint.per-file-ignores]
+"config/settings.py" = ["F401", "E402"]
+"*/migrations/*" = ["ALL"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+python_files = ["test_*.py", "*_test.py", "tests.py"]
+addopts = "-q --strict-markers"
