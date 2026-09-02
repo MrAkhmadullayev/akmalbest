@@ -1,18 +1,17 @@
 """Reports views - analytics and dashboard data from real database."""
-from datetime import timedelta
 from decimal import Decimal
 
-from django.db.models import Sum, Count, F, Q
+from django.db.models import Count, F, Sum
 from django.utils import timezone
-from rest_framework.views import APIView
-from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from apps.sales.models import Sale, SaleItem, SaleStatus
-from apps.products.models import Product
+from apps.accounts.permissions import IsAdmin
 from apps.debts.models import Debt, DebtStatus
 from apps.expenses.models import Expense
-from apps.accounts.permissions import IsAdmin
+from apps.products.models import Product
+from apps.sales.models import Sale, SaleItem, SaleStatus
 
 
 class DashboardView(APIView):

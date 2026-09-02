@@ -1,5 +1,7 @@
 from django.contrib import admin
-from .models import Sale, SaleItem, Payment
+
+from .models import Payment, Sale, SaleItem
+
 
 @admin.register(Sale)
 class SaleAdmin(admin.ModelAdmin):

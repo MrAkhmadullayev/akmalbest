@@ -1,21 +1,26 @@
 """Sale views."""
 import logging
 from decimal import Decimal
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.filters import SearchFilter, OrderingFilter
 
-from .models import Sale, SaleItem, Payment
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.filters import OrderingFilter, SearchFilter
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+from apps.accounts.permissions import IsCashierOrAdmin
+from apps.customers.models import Customer
+
+from .models import Payment, Sale, SaleItem
 from .serializers import (
-    SaleListSerializer, SaleDetailSerializer,
-    SaleCreateSerializer, SaleReturnSerializer, PaymentSerializer,
+    PaymentSerializer,
+    SaleCreateSerializer,
+    SaleDetailSerializer,
+    SaleListSerializer,
+    SaleReturnSerializer,
 )
 from .services import SaleService
-from apps.accounts.permissions import IsCashierOrAdmin, IsAdmin
-from apps.customers.models import Customer
 
 logger = logging.getLogger(__name__)
 
@@ -48,8 +53,9 @@ class SaleViewSet(viewsets.ModelViewSet):
         queryset = self.filter_queryset(self.get_queryset())
 
         # We calculate summary on the *filtered* queryset
-        from django.db.models import Sum
         from decimal import Decimal
+
+        from django.db.models import Sum
 
         summary = {
             'total_sales': queryset.aggregate(t=Sum('total'))['t'] or Decimal('0'),

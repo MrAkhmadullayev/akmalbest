@@ -2,10 +2,10 @@
 Inventory service layer - handles all stock mutations with locking.
 """
 from django.db import transaction
-from django.db.models import F
+
 from apps.inventory.models import Inventory, InventoryTransaction, TransactionType
-from apps.products.models import Product
 from apps.notifications.services import NotificationService
+from apps.products.models import Product
 
 
 class InventoryService:
@@ -31,7 +31,7 @@ class InventoryService:
         Product.objects.filter(pk=product.pk).update(current_stock=new_quantity)
 
         # Create batch if purchase price is provided
-        from apps.inventory.models import InventoryBatch, BatchPaymentMethod
+        from apps.inventory.models import BatchPaymentMethod, InventoryBatch
         if purchase_price is not None:
             InventoryBatch.objects.create(
                 product=product,
@@ -68,8 +68,9 @@ class InventoryService:
         inventory = Inventory.objects.select_for_update().get(product=product)
         previous_quantity = inventory.quantity
 
-        from apps.inventory.models import InventoryBatch, BatchPaymentMethod
         from decimal import Decimal
+
+        from apps.inventory.models import BatchPaymentMethod, InventoryBatch
 
         cogs_cash = Decimal('0')
         cogs_debt = Decimal('0')

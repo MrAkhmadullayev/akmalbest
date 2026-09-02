@@ -2,17 +2,18 @@
 Inventory views.
 """
 from django.db import models
-from rest_framework import viewsets, generics, status
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework import generics, status, viewsets
+from rest_framework.filters import OrderingFilter, SearchFilter
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
-from .models import Inventory, InventoryTransaction
-from .serializers import InventorySerializer, InventoryAdjustSerializer, InventoryTransactionSerializer
-from .services import InventoryService
 from apps.accounts.permissions import IsAdminOrWarehouseManager
 from apps.products.models import Product
+
+from .models import Inventory, InventoryTransaction
+from .serializers import InventoryAdjustSerializer, InventorySerializer, InventoryTransactionSerializer
+from .services import InventoryService
 
 
 class InventoryViewSet(viewsets.ReadOnlyModelViewSet):

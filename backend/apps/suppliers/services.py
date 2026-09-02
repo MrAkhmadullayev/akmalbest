@@ -2,10 +2,13 @@
 Purchase service layer.
 """
 from decimal import Decimal
+
 from django.db import transaction
-from apps.inventory.services import InventoryService
+
 from apps.inventory.models import TransactionType
-from .models import Purchase, PurchaseItem, SupplierDebt, PaymentMethod
+from apps.inventory.services import InventoryService
+
+from .models import PaymentMethod, Purchase, PurchaseItem, SupplierDebt
 
 
 class PurchaseService:

@@ -1,6 +1,7 @@
 """Supplier serializers."""
 from rest_framework import serializers
-from .models import Supplier, Purchase, PurchaseItem
+
+from .models import Purchase, PurchaseItem, Supplier
 
 
 class SupplierSerializer(serializers.ModelSerializer):

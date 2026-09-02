@@ -1,6 +1,7 @@
 """Sale serializers."""
 from rest_framework import serializers
-from .models import Sale, SaleItem, Payment
+
+from .models import Payment, Sale, SaleItem
 
 
 class SaleItemSerializer(serializers.ModelSerializer):

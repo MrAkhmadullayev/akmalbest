@@ -1,25 +1,25 @@
 """
 Account views for authentication and user management.
 """
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework_simplejwt.tokens import RefreshToken
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from .models import User
+from .permissions import IsSuperAdmin
 from .serializers import (
-    CustomTokenObtainPairSerializer,
-    UserSerializer,
-    UserCreateSerializer,
-    UserUpdateSerializer,
     ChangePasswordSerializer,
+    CustomTokenObtainPairSerializer,
     MeSerializer,
+    UserCreateSerializer,
+    UserSerializer,
+    UserUpdateSerializer,
 )
-from .permissions import IsSuperAdmin, IsAdmin
 
 
 class LoginView(TokenObtainPairView):

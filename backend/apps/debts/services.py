@@ -1,8 +1,11 @@
 """Debt service layer."""
 from decimal import Decimal
+
 from django.db import transaction
-from .models import Debt, DebtPayment, DebtStatus
+
 from apps.audit.services import AuditService
+
+from .models import Debt, DebtPayment, DebtStatus
 
 
 class DebtService:

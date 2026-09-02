@@ -1,16 +1,17 @@
 """Celery tasks for scheduled background jobs."""
+from datetime import timedelta
+
 from celery import shared_task
 from django.db import models
 from django.utils import timezone
-from datetime import timedelta
 
 
 @shared_task
 def check_debt_due_dates():
     """Check for upcoming, due today, and overdue debts. Runs daily via Celery Beat."""
     from apps.debts.models import Debt, DebtStatus
-    from apps.notifications.services import NotificationService
     from apps.notifications.models import NotificationType
+    from apps.notifications.services import NotificationService
 
     today = timezone.now().date()
     upcoming_date = today + timedelta(days=3)
@@ -45,8 +46,8 @@ def check_debt_due_dates():
 @shared_task
 def check_low_stock():
     """Check for low stock products. Runs daily via Celery Beat."""
-    from apps.products.models import Product
     from apps.notifications.services import NotificationService
+    from apps.products.models import Product
 
     low_stock_products = Product.objects.filter(
         is_active=True,

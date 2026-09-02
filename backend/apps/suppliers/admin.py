@@ -1,5 +1,7 @@
 from django.contrib import admin
-from .models import Supplier, Purchase, PurchaseItem
+
+from .models import Purchase, PurchaseItem, Supplier
+
 
 @admin.register(Supplier)
 class SupplierAdmin(admin.ModelAdmin):

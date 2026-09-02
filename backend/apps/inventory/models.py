@@ -2,10 +2,11 @@
 Inventory and InventoryTransaction models.
 """
 import uuid
-from django.db import models
+from decimal import Decimal
+
 from django.conf import settings
 from django.core.validators import MinValueValidator
-from decimal import Decimal
+from django.db import models
 
 
 class Inventory(models.Model):

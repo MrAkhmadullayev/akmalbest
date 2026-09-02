@@ -2,14 +2,16 @@
 Sale service layer - handles complete sale lifecycle with atomic transactions.
 """
 from decimal import Decimal
+
 from django.db import transaction
 from django.utils import timezone
 
-from apps.inventory.services import InventoryService
-from apps.inventory.models import TransactionType
-from apps.products.models import Product
 from apps.audit.services import AuditService
-from .models import Sale, SaleItem, Payment, PaymentMethod, SaleStatus
+from apps.inventory.models import TransactionType
+from apps.inventory.services import InventoryService
+from apps.products.models import Product
+
+from .models import Payment, PaymentMethod, Sale, SaleItem, SaleStatus
 
 
 class SaleService:

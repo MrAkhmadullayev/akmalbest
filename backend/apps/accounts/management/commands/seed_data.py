@@ -1,15 +1,14 @@
 """Management command to seed development data."""
 from decimal import Decimal
+
 from django.core.management.base import BaseCommand
-from django.utils import timezone
-from datetime import timedelta
 
 from apps.accounts.models import User, UserRole
-from apps.products.models import Category, Brand, Product
-from apps.inventory.models import Inventory
-from apps.suppliers.models import Supplier
 from apps.customers.models import Customer
 from apps.expenses.models import ExpenseCategory
+from apps.inventory.models import Inventory
+from apps.products.models import Brand, Category, Product
+from apps.suppliers.models import Supplier
 
 
 class Command(BaseCommand):

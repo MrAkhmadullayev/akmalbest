@@ -1,9 +1,10 @@
 """
 Product URL configuration.
 """
-from django.urls import path, include
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
-from .views import CategoryViewSet, BrandViewSet, ProductViewSet, ProductBarcodeLookupView
+
+from .views import BrandViewSet, CategoryViewSet, ProductBarcodeLookupView, ProductViewSet
 
 router = DefaultRouter()
 router.register(r'categories', CategoryViewSet, basename='categories')

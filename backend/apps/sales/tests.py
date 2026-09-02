@@ -1,13 +1,12 @@
-import pytest
-from django.test import TestCase
 from decimal import Decimal
-from django.utils import timezone
+
+from django.test import TestCase
+
 from apps.accounts.models import User, UserRole
-from apps.products.models import Product, Category
 from apps.inventory.models import Inventory, InventoryTransaction, TransactionType
-from apps.sales.models import Sale, SaleItem, Payment, PaymentMethod, SaleStatus
+from apps.products.models import Category, Product
+from apps.sales.models import PaymentMethod, Sale, SaleItem, SaleStatus
 from apps.sales.services import SaleService
-from apps.debts.models import Debt, DebtStatus
 
 
 class AlkagolBusinessLogicTests(TestCase):

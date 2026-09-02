@@ -1,10 +1,12 @@
 """Customer views."""
 from rest_framework import viewsets
+from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.filters import SearchFilter, OrderingFilter
-from .models import Customer
-from .serializers import CustomerSerializer, CustomerDetailSerializer
+
 from apps.accounts.permissions import IsCashierOrAdmin
+
+from .models import Customer
+from .serializers import CustomerDetailSerializer, CustomerSerializer
 
 
 class CustomerViewSet(viewsets.ModelViewSet):

@@ -1,20 +1,22 @@
 """Debt views."""
-from rest_framework import viewsets, status
+from django.utils import timezone
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.filters import SearchFilter, OrderingFilter
-from django.utils import timezone
-from rest_framework.decorators import action
+
+from apps.accounts.permissions import IsCashierOrAdmin
 
 from .models import Debt, DebtPayment
 from .serializers import (
-    DebtListSerializer, DebtDetailSerializer,
-    DebtPaymentSerializer, DebtPaymentCreateSerializer,
+    DebtDetailSerializer,
+    DebtListSerializer,
+    DebtPaymentCreateSerializer,
+    DebtPaymentSerializer,
 )
 from .services import DebtService
-from apps.accounts.permissions import IsCashierOrAdmin
 
 
 class DebtViewSet(viewsets.ReadOnlyModelViewSet):

@@ -1,21 +1,25 @@
 """
 Product views and viewsets.
 """
-from rest_framework import viewsets, generics, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework import generics, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.filters import OrderingFilter, SearchFilter
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
-from .models import Category, Brand, Product
-from .serializers import (
-    CategorySerializer, BrandSerializer,
-    ProductListSerializer, ProductDetailSerializer,
-    ProductCreateUpdateSerializer, ProductBarcodeLookupSerializer,
-)
-from apps.accounts.permissions import IsAdmin, IsAdminOrWarehouseManager
+from apps.accounts.permissions import IsAdminOrWarehouseManager
 from apps.audit.services import AuditService
+
+from .models import Brand, Category, Product
+from .serializers import (
+    BrandSerializer,
+    CategorySerializer,
+    ProductBarcodeLookupSerializer,
+    ProductCreateUpdateSerializer,
+    ProductDetailSerializer,
+    ProductListSerializer,
+)
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -80,8 +84,8 @@ class ProductViewSet(viewsets.ModelViewSet):
 
         # Add initial stock as a batch
         if initial_stock > 0:
-            from apps.inventory.services import InventoryService
             from apps.inventory.models import TransactionType
+            from apps.inventory.services import InventoryService
             InventoryService.increase_stock(
                 product=product,
                 quantity=initial_stock,
@@ -149,8 +153,8 @@ class ProductViewSet(viewsets.ModelViewSet):
             except Exception:
                 return Response({'success': False, 'message': "Noto'g'ri narx."}, status=status.HTTP_400_BAD_REQUEST)
 
-        from apps.inventory.services import InventoryService
         from apps.inventory.models import TransactionType
+        from apps.inventory.services import InventoryService
 
         try:
             InventoryService.increase_stock(

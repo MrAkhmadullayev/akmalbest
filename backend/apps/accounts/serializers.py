@@ -1,10 +1,11 @@
 """
 Account serializers for authentication and user management.
 """
+from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from django.contrib.auth.password_validation import validate_password
-from .models import User, UserRole
+
+from .models import User
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):

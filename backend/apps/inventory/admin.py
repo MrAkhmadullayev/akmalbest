@@ -1,5 +1,7 @@
 from django.contrib import admin
+
 from .models import Inventory, InventoryTransaction
+
 
 @admin.register(Inventory)
 class InventoryAdmin(admin.ModelAdmin):

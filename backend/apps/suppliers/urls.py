@@ -1,7 +1,8 @@
 """Supplier URL configuration."""
-from django.urls import path, include
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
-from .views import SupplierViewSet, PurchaseViewSet
+
+from .views import PurchaseViewSet, SupplierViewSet
 
 router = DefaultRouter()
 router.register(r'suppliers', SupplierViewSet, basename='suppliers')

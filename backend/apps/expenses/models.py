@@ -1,9 +1,10 @@
 """Expense models."""
 import uuid
 from decimal import Decimal
-from django.db import models
+
 from django.conf import settings
 from django.core.validators import MinValueValidator
+from django.db import models
 
 
 class ExpenseCategory(models.Model):

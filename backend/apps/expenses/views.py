@@ -1,12 +1,12 @@
 """Expense views."""
-from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework import viewsets
+from rest_framework.filters import OrderingFilter, SearchFilter
+
+from apps.accounts.permissions import IsAdmin
 
 from .models import Expense, ExpenseCategory
-from .serializers import ExpenseSerializer, ExpenseCategorySerializer
-from apps.accounts.permissions import IsAdmin
+from .serializers import ExpenseCategorySerializer, ExpenseSerializer
 
 
 class ExpenseCategoryViewSet(viewsets.ModelViewSet):

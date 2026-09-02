@@ -1,6 +1,7 @@
 """Reports URL configuration."""
 from django.urls import path
-from .views import DashboardView, SalesReportView, ProfitReportView, InventoryReportView, DebtReportView
+
+from .views import DashboardView, DebtReportView, InventoryReportView, ProfitReportView, SalesReportView
 
 urlpatterns = [
     path('reports/dashboard/', DashboardView.as_view(), name='report-dashboard'),
