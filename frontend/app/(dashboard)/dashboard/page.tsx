@@ -1,12 +1,13 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { reportsService } from '@/services/reports';
+import { salesService } from '@/services/sales';
 import { formatCurrency, formatDateTime, getStockStatus, getPaymentMethodLabel } from '@/lib/utils';
 import {
   TrendingUp, ShoppingCart, Wallet, AlertTriangle,
   CreditCard, Package, PackageX, ArrowUpRight,
-  Clock
+  Clock, Eye, XCircle
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -22,6 +23,23 @@ export default function DashboardPage() {
   });
 
   const dashboard = data?.data;
+  const queryClient = useQueryClient();
+
+  const cancelMutation = useMutation({
+    mutationFn: (saleId: string) => salesService.cancel(saleId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+    onError: (err: any) => {
+      alert(err?.response?.data?.message || "Savdoni bekor qilishda xatolik yuz berdi.");
+    },
+  });
+
+  const handleCancel = (saleId: string, saleNumber: string) => {
+    if (confirm(`"${saleNumber}" raqamli savdoni bekor qilmoqchimisiz? Barcha mahsulotlar omborga qaytariladi.`)) {
+      cancelMutation.mutate(saleId);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -195,6 +213,7 @@ export default function DashboardPage() {
                   <th>Kassir</th>
                   <th>Summa</th>
                   <th>Usul</th>
+                  <th className="text-right">Amallar</th>
                 </tr>
               </thead>
               <tbody>
@@ -210,10 +229,27 @@ export default function DashboardPage() {
                         {getPaymentMethodLabel(sale.payment_method)}
                       </span>
                     </td>
+                    <td>
+                      <div className="flex justify-end gap-2">
+                        <Link href={`/sales/${sale.id}`} className="p-1 hover:bg-gray-50 dark:hover:bg-gray-800 rounded text-blue-500" title="Ko'rish">
+                          <Eye size={18} />
+                        </Link>
+                        {sale.status !== 'CANCELLED' && (
+                          <button
+                            onClick={() => handleCancel(sale.id, sale.sale_number)}
+                            disabled={cancelMutation.isPending}
+                            className="p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded text-red-400 hover:text-red-600 cursor-pointer"
+                            title="Bekor qilish"
+                          >
+                            <XCircle size={18} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 ))}
                 {(!dashboard?.recent_sales || dashboard.recent_sales.length === 0) && (
-                  <tr><td colSpan={4} className="text-center text-gray-400 py-8">Savdolar mavjud emas</td></tr>
+                  <tr><td colSpan={5} className="text-center text-gray-400 py-8">Savdolar mavjud emas</td></tr>
                 )}
               </tbody>
             </table>
