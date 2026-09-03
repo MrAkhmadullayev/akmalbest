@@ -8,7 +8,7 @@ from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.response import Response
 
-from apps.accounts.permissions import HasModulePermission, IsCashierOrAdmin
+from apps.accounts.permissions import HasModulePermission
 from apps.customers.models import Customer
 
 from .models import Payment, Sale, SaleItem
@@ -45,9 +45,13 @@ class SaleViewSet(viewsets.ModelViewSet):
         return SaleDetailSerializer
 
     def get_permissions(self):
-        if self.action in ('list', 'retrieve'):
+        # HasModulePermission required_module='pos' allaqachon foydalanuvchining
+        # POS bo'limiga ruxsati borligini tekshiradi. Qo'shimcha rol tekshiruvi
+        # (IsCashierOrAdmin) ombor mudiri kabi ruxsat berilgan rollarga to'siq
+        # bo'lardi.
+        if self.action in ('list', 'retrieve', 'metadata'):
             return [HasModulePermission()]
-        return [HasModulePermission(), IsCashierOrAdmin()]
+        return [HasModulePermission()]
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())

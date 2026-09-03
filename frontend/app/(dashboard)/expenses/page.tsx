@@ -10,7 +10,6 @@ export default function ExpensesPage() {
   const queryClient = useQueryClient();
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
-  const [category, setCategory] = useState('');
   const [expenseDate, setExpenseDate] = useState(new Date().toISOString().split('T')[0]);
   const [description, setDescription] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
@@ -18,11 +17,6 @@ export default function ExpensesPage() {
   const { data: expensesData, isLoading } = useQuery({
     queryKey: ['expenses'],
     queryFn: () => expensesService.getAll(),
-  });
-
-  const { data: categoriesData } = useQuery({
-    queryKey: ['expense-categories'],
-    queryFn: () => expensesService.getCategories(),
   });
 
   const createMutation = useMutation({
@@ -38,19 +32,17 @@ export default function ExpensesPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !amount || !category) return;
+    if (!title || !amount) return;
 
     createMutation.mutate({
       title,
       amount: parseFloat(amount),
-      category,
       expense_date: expenseDate,
       description,
     });
   };
 
   const expenses = expensesData?.data?.results || [];
-  const categories = categoriesData?.data?.results || [];
 
   return (
     <div className="p-6 lg:p-8 space-y-6">
@@ -76,7 +68,6 @@ export default function ExpensesPage() {
                 <tr>
                   <th>Sana</th>
                   <th>Sarlavha</th>
-                  <th>Kategoriya</th>
                   <th>Summa</th>
                   <th>Mas&apos;ul</th>
                   <th>Tavsif</th>
@@ -87,7 +78,6 @@ export default function ExpensesPage() {
                   <tr key={e.id}>
                     <td>{formatDate(e.expense_date)}</td>
                     <td className="font-medium text-gray-900">{e.title}</td>
-                    <td>{e.category_name}</td>
                     <td className="font-bold text-red-600">{formatCurrency(e.amount)}</td>
                     <td>{e.created_by_name}</td>
                     <td className="text-gray-500 text-xs max-w-xs truncate">{e.description || '-'}</td>
@@ -95,7 +85,7 @@ export default function ExpensesPage() {
                 ))}
                 {expenses.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="text-center text-gray-400 py-12">
+                    <td colSpan={5} className="text-center text-gray-400 py-12">
                       Xarajatlar kiritilmagan
                     </td>
                   </tr>
@@ -136,21 +126,6 @@ export default function ExpensesPage() {
                   placeholder="Summa..."
                   required
                 />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Kategoriya</label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="input"
-                  required
-                >
-                  <option value="">Tanlang...</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
               </div>
 
               <div>

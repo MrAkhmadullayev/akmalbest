@@ -25,7 +25,8 @@ class ExpenseCategory(models.Model):
 class Expense(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     category = models.ForeignKey(
-        ExpenseCategory, on_delete=models.PROTECT, related_name='expenses'
+        ExpenseCategory, on_delete=models.SET_NULL, related_name='expenses',
+        null=True, blank=True,
     )
     title = models.CharField(max_length=255)
     amount = models.DecimalField(

@@ -23,6 +23,7 @@ class ExpenseSerializer(serializers.ModelSerializer):
             'expense_date', 'created_at',
         ]
         read_only_fields = ['id', 'created_by', 'created_at']
+        extra_kwargs = {'category': {'required': False, 'allow_null': True}}
 
     def create(self, validated_data):
         validated_data['created_by'] = self.context['request'].user

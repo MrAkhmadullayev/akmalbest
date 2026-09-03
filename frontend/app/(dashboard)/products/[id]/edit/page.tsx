@@ -20,6 +20,7 @@ const productSchema = zod.object({
   unit: zod.enum(['bottle', 'L', 'ml', 'pcs', 'box', 'pack']),
   purchase_price: zod.string().min(1, 'Sotib olish narxi kiritilishi shart'),
   selling_price: zod.string().min(1, 'Sotish narxi kiritilishi shart'),
+  current_stock: zod.number().min(0).optional(),
   min_stock: zod.number().min(0),
   warning_stock: zod.number().min(0),
   max_stock: zod.number().min(0),
@@ -75,6 +76,7 @@ export default function EditProductPage() {
         unit: p.unit as any,
         purchase_price: p.purchase_price,
         selling_price: p.selling_price,
+        current_stock: p.current_stock,
         min_stock: p.min_stock,
         warning_stock: p.warning_stock,
         max_stock: p.max_stock,
@@ -200,6 +202,17 @@ export default function EditProductPage() {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Sotish narxi (UZS)</label>
             <input {...register('selling_price')} type="number" className="input" />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Joriy zaxira (dona)</label>
+            <input
+              {...register('current_stock', { valueAsNumber: true })}
+              type="number"
+              className="input font-semibold text-indigo-700"
+              min={0}
+            />
+            <p className="text-xs text-gray-400 mt-1">Ombordagi hozirgi miqdor</p>
           </div>
 
           <div>

@@ -1,20 +1,40 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { salesService } from '@/services/sales';
-import { formatCurrency, formatDate } from '@/lib/utils';
-import { Search, Eye } from 'lucide-react';
+import { formatCurrency, formatDate, getPaymentMethodLabel } from '@/lib/utils';
+import { Search, Eye, XCircle } from 'lucide-react';
 import { useState } from 'react';
 import Link from 'next/link';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function SalesPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const queryClient = useQueryClient();
+  const { hasRole } = useAuth();
 
   const { data, isLoading } = useQuery({
     queryKey: ['sales', search, page],
     queryFn: () => salesService.getAll({ search, page: page.toString() }),
   });
+
+  const cancelMutation = useMutation({
+    mutationFn: (saleId: string) => salesService.cancel(saleId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sales'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+    onError: (err: any) => {
+      alert(err?.response?.data?.message || "Savdoni bekor qilishda xatolik yuz berdi.");
+    },
+  });
+
+  const handleCancel = (saleId: string, saleNumber: string) => {
+    if (confirm(`"${saleNumber}" raqamli savdoni bekor qilmoqchimisiz? Barcha mahsulotlar omborga qaytariladi.`)) {
+      cancelMutation.mutate(saleId);
+    }
+  };
 
   const sales = data?.data?.results || [];
   const summary = (data?.data as any)?.summary || {
@@ -26,6 +46,16 @@ export default function SalesPage() {
   const totalCount = data?.data?.count || 0;
   const pageSize = 25;
   const totalPages = Math.ceil(totalCount / pageSize);
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'COMPLETED': return 'Bajarildi';
+      case 'CANCELLED': return 'Bekor qilindi';
+      case 'RETURNED': return 'Qaytarildi';
+      case 'PARTIALLY_RETURNED': return 'Qisman qaytarildi';
+      default: return status;
+    }
+  };
 
   return (
     <div className="p-6 lg:p-8 space-y-6">
@@ -87,7 +117,7 @@ export default function SalesPage() {
                 <th>Jami summa</th>
                 <th>To&apos;lov usuli</th>
                 <th>Holat</th>
-                <th className="text-right">Ko&apos;rish</th>
+                <th className="text-right">Amallar</th>
               </tr>
             </thead>
             <tbody>
@@ -101,20 +131,34 @@ export default function SalesPage() {
                   <td>{sale.customer_name || '-'}</td>
                   <td className="font-bold">{formatCurrency(sale.total)}</td>
                   <td>
-                    <span className="badge bg-gray-100 text-gray-800">{sale.payment_method}</span>
-                  </td>
-                  <td>
-                    <span className={`badge ${
-                      sale.status === 'COMPLETED' ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400' : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'
-                    }`}>
-                      {sale.status}
+                    <span className="badge bg-gray-100 text-gray-800">
+                      {getPaymentMethodLabel(sale.payment_method)}
                     </span>
                   </td>
                   <td>
-                    <div className="flex justify-end">
-                      <Link href={`/sales/${sale.id}`} className="p-1 hover:bg-gray-50 dark:hover:bg-gray-800 rounded">
+                    <span className={`badge ${
+                      sale.status === 'COMPLETED' ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400'
+                        : sale.status === 'CANCELLED' ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'
+                        : 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400'
+                    }`}>
+                      {getStatusLabel(sale.status)}
+                    </span>
+                  </td>
+                  <td>
+                    <div className="flex justify-end gap-2">
+                      <Link href={`/sales/${sale.id}`} className="p-1 hover:bg-gray-50 dark:hover:bg-gray-800 rounded text-blue-500" title="Ko'rish">
                         <Eye size={18} />
                       </Link>
+                      {sale.status === 'COMPLETED' && (
+                        <button
+                          onClick={() => handleCancel(sale.id, sale.sale_number)}
+                          disabled={cancelMutation.isPending}
+                          className="p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded text-red-400 hover:text-red-600 cursor-pointer"
+                          title="Bekor qilish"
+                        >
+                          <XCircle size={18} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

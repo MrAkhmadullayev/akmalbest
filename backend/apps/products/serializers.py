@@ -83,12 +83,14 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
         fields = [
             'name', 'barcode', 'category', 'brand', 'brand_name', 'volume', 'unit',
             'purchase_price', 'selling_price',
-            'min_stock', 'warning_stock', 'max_stock',
-            'expiration_date', 'image', 'description', 'is_active',
+            'min_stock', 'warning_stock', 'max_stock', 'current_stock',
+            'supplier', 'expiration_date', 'image', 'description', 'is_active',
             'initial_stock', 'payment_method'
         ]
         extra_kwargs = {
-            'brand': {'required': False, 'allow_null': True}
+            'brand': {'required': False, 'allow_null': True},
+            'supplier': {'required': False, 'allow_null': True},
+            'current_stock': {'required': False},
         }
 
     def validate_barcode(self, value):
