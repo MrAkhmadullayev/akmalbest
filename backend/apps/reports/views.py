@@ -11,6 +11,8 @@ from apps.debts.models import Debt, DebtStatus
 from apps.expenses.models import Expense
 from apps.products.models import Product
 from apps.sales.models import Sale, SaleItem, SaleStatus
+from .models import ShiftReport
+from .serializers import ShiftReportSerializer
 
 
 class DashboardView(APIView):
@@ -19,26 +21,33 @@ class DashboardView(APIView):
     permission_classes = [HasModulePermission]
 
     def get(self, request):
-        today = timezone.now().date()
-        today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        now = timezone.now()
+        
+        # Determine the start of the current shift
+        last_shift = ShiftReport.objects.order_by('-closed_at').first()
+        if last_shift:
+            shift_start = last_shift.closed_at
+        else:
+            # If no shift ever closed, use start of today or earliest sale
+            shift_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
-        # Today's sales
-        today_sales = Sale.objects.filter(
-            created_at__gte=today_start,
+        # Current shift sales
+        shift_sales = Sale.objects.filter(
+            created_at__gte=shift_start,
             status=SaleStatus.COMPLETED
         )
-        today_sales_total = today_sales.aggregate(total=Sum('total'))['total'] or Decimal('0')
-        today_sales_count = today_sales.count()
-        today_profit = today_sales.aggregate(total=Sum('profit'))['total'] or Decimal('0')
+        today_sales_total = shift_sales.aggregate(total=Sum('total'))['total'] or Decimal('0')
+        today_sales_count = shift_sales.count()
+        today_profit = shift_sales.aggregate(total=Sum('profit'))['total'] or Decimal('0')
 
-        # Today's sales by payment method
-        today_cash = today_sales.filter(payment_method='CASH').aggregate(total=Sum('total'))['total'] or Decimal('0')
-        today_card = today_sales.filter(payment_method='CARD').aggregate(total=Sum('total'))['total'] or Decimal('0')
-        today_debt = today_sales.filter(payment_method='DEBT').aggregate(total=Sum('total'))['total'] or Decimal('0')
+        # Current shift sales by payment method
+        today_cash = shift_sales.filter(payment_method='CASH').aggregate(total=Sum('total'))['total'] or Decimal('0')
+        today_card = shift_sales.filter(payment_method='CARD').aggregate(total=Sum('total'))['total'] or Decimal('0')
+        today_debt = shift_sales.filter(payment_method='DEBT').aggregate(total=Sum('total'))['total'] or Decimal('0')
 
-        # Today's expenses
+        # Current shift expenses
         today_expenses = Expense.objects.filter(
-            expense_date=today
+            created_at__gte=shift_start
         ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
 
         # Debts
@@ -142,6 +151,81 @@ class DashboardView(APIView):
             'low_stock_products': low_stock_data,
             'overdue_debts': overdue_data,
         })
+
+
+class CloseShiftView(APIView):
+    """Close the current shift and generate a Z-Report."""
+    required_module = 'dashboard'  # Assuming closing shift requires dashboard or pos permission
+    permission_classes = [HasModulePermission]
+
+    def post(self, request):
+        now = timezone.now()
+        
+        last_shift = ShiftReport.objects.order_by('-closed_at').first()
+        if last_shift:
+            shift_start = last_shift.closed_at
+        else:
+            shift_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+        # Gather sales and expenses for this shift
+        shift_sales = Sale.objects.filter(
+            created_at__gte=shift_start,
+            created_at__lte=now,
+            status=SaleStatus.COMPLETED
+        )
+        
+        shift_expenses = Expense.objects.filter(
+            created_at__gte=shift_start,
+            created_at__lte=now
+        )
+        
+        sales_count = shift_sales.count()
+        total_expenses = shift_expenses.aggregate(total=Sum('amount'))['total'] or Decimal('0')
+        
+        if sales_count == 0 and total_expenses == 0:
+            return Response({'success': False, 'message': "Smenada hech qanday tranzaksiya yo'q!"}, status=400)
+            
+        total_sales = shift_sales.aggregate(total=Sum('total'))['total'] or Decimal('0')
+        total_cash = shift_sales.filter(payment_method='CASH').aggregate(total=Sum('total'))['total'] or Decimal('0')
+        total_card = shift_sales.filter(payment_method='CARD').aggregate(total=Sum('total'))['total'] or Decimal('0')
+        total_debt = shift_sales.filter(payment_method='DEBT').aggregate(total=Sum('total'))['total'] or Decimal('0')
+        total_profit = shift_sales.aggregate(total=Sum('profit'))['total'] or Decimal('0')
+        
+        # Generate shift number: YYYYMMDD-XX
+        prefix = now.strftime('%Y%m%d')
+        last_num_today = ShiftReport.objects.filter(shift_number__startswith=prefix).count()
+        shift_number = f"{prefix}-{(last_num_today + 1):02d}"
+        
+        report = ShiftReport.objects.create(
+            shift_number=shift_number,
+            opened_at=shift_start,
+            # closed_at will be set automatically
+            closed_by=request.user,
+            total_sales=total_sales,
+            total_cash=total_cash,
+            total_card=total_card,
+            total_debt=total_debt,
+            total_profit=total_profit,
+            total_expenses=total_expenses,
+            sales_count=sales_count
+        )
+        
+        return Response({
+            'success': True, 
+            'message': "Smena muvaffaqiyatli yopildi.",
+            'data': ShiftReportSerializer(report).data
+        })
+
+
+class ShiftListView(APIView):
+    """List all closed shifts."""
+    required_module = 'reports'
+    permission_classes = [HasModulePermission]
+
+    def get(self, request):
+        shifts = ShiftReport.objects.all().select_related('closed_by')
+        serializer = ShiftReportSerializer(shifts, many=True)
+        return Response({'results': serializer.data})
 
 
 class SalesReportView(APIView):

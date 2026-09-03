@@ -16,4 +16,10 @@ export const reportsService = {
 
   getDebtReport: () =>
     apiClient.get('/reports/debts/'),
+
+  closeShift: () =>
+    apiClient.post('/reports/close-shift/'),
+
+  getShifts: () =>
+    apiClient.get('/reports/shifts/'),
 };

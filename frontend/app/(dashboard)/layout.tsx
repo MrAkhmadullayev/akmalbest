@@ -7,7 +7,7 @@ import Link from 'next/link';
 import {
   LayoutDashboard, ShoppingCart, Package,
   Users, CreditCard, Wallet, BarChart3,
-  Bell, UserCog, Settings, LogOut, ChevronLeft, Menu, Tags,
+  Bell, UserCog, Settings, LogOut, ChevronLeft, Menu, Tags, Clock,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
@@ -31,6 +31,7 @@ const navigation: NavItem[] = [
   { name: 'Qarzlar', href: '/debts', icon: CreditCard, permission: 'debts' },
   { name: 'Xarajatlar', href: '/expenses', icon: Wallet, permission: 'expenses' },
   { name: 'Hisobotlar', href: '/reports', icon: BarChart3, permission: 'reports' },
+  { name: 'Smenalar tarixi', href: '/shifts', icon: Clock, permission: 'reports' },
   { name: 'Ombor', href: '/inventory', icon: Package, permission: 'inventory' },
   { name: 'Yetkazib beruvchilar', href: '/suppliers', icon: Users, permission: 'suppliers' },
   { name: 'Bildirishnomalar', href: '/notifications', icon: Bell, permission: 'notifications' },

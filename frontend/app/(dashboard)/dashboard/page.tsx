@@ -7,7 +7,7 @@ import { formatCurrency, formatDateTime, getStockStatus, getPaymentMethodLabel }
 import {
   TrendingUp, ShoppingCart, Wallet, AlertTriangle,
   CreditCard, Package, PackageX, ArrowUpRight,
-  Clock, Eye, XCircle
+  Clock, Eye, XCircle, Power
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -38,6 +38,23 @@ export default function DashboardPage() {
   const handleCancel = (saleId: string, saleNumber: string) => {
     if (confirm(`"${saleNumber}" raqamli savdoni bekor qilmoqchimisiz? Barcha mahsulotlar omborga qaytariladi.`)) {
       cancelMutation.mutate(saleId);
+    }
+  };
+
+  const closeShiftMutation = useMutation({
+    mutationFn: () => reportsService.closeShift(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      alert("Smena muvaffaqiyatli yopildi. Barcha kunlik savdo ma'lumotlari nolga tushdi va smenalar tarixiga yozildi.");
+    },
+    onError: (err: any) => {
+      alert(err?.response?.data?.message || "Smenani yopishda xatolik yuz berdi.");
+    },
+  });
+
+  const handleCloseShift = () => {
+    if (confirm("Haqiqatan ham joriy smenani yopmoqchimisiz? Barcha savdo, xarajat hisobotlari smenalar tarixiga saqlanadi va yangi smena noldan boshlanadi.")) {
+      closeShiftMutation.mutate();
     }
   };
 
@@ -73,7 +90,7 @@ export default function DashboardPage() {
 
   const stats = [
     {
-      label: "Bugungi savdo (Umumiy)",
+      label: "Joriy smena savdosi (Umumiy)",
       value: formatCurrency(dashboard?.today_sales_total || '0'),
       sub: `${dashboard?.today_sales_count || 0} ta savdo`,
       icon: ShoppingCart,
@@ -102,14 +119,14 @@ export default function DashboardPage() {
       iconBg: 'bg-orange-100',
     },
     {
-      label: "Bugungi foyda",
+      label: "Joriy smena foydasi",
       value: formatCurrency(dashboard?.today_profit || '0'),
       icon: TrendingUp,
       color: 'bg-emerald-50 text-emerald-600',
       iconBg: 'bg-emerald-100',
     },
     {
-      label: "Bugungi xarajat",
+      label: "Joriy smena xarajati",
       value: formatCurrency(dashboard?.today_expenses || '0'),
       icon: Wallet,
       color: 'bg-orange-50 text-orange-600',
@@ -163,15 +180,25 @@ export default function DashboardPage() {
   return (
     <div className="p-6 lg:p-8 space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">Bugungi umumiy ko&apos;rsatkichlar</p>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">Joriy smena ko&apos;rsatkichlari</p>
         </div>
-        <Link href="/pos" className="btn-primary">
-          <ShoppingCart size={18} />
-          Yangi sotuv
-        </Link>
+        <div className="flex gap-2">
+          <button 
+            onClick={handleCloseShift}
+            disabled={closeShiftMutation.isPending}
+            className="btn-secondary bg-gray-50 text-gray-700 hover:bg-gray-100"
+          >
+            <Power size={18} />
+            Smenani yopish
+          </button>
+          <Link href="/pos" className="btn-primary">
+            <ShoppingCart size={18} />
+            Yangi sotuv
+          </Link>
+        </div>
       </div>
 
       {/* Stats Grid */}
