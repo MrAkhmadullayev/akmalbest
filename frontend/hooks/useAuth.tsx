@@ -2,7 +2,8 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authService } from '@/services/auth';
-import type { User } from '@/types';
+import type { ModuleKey, User } from '@/types';
+import { DEFAULT_ROLE_MODULES } from '@/lib/permissions';
 
 interface AuthContextType {
   user: User | null;
@@ -11,7 +12,7 @@ interface AuthContextType {
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   hasRole: (...roles: string[]) => boolean;
-  hasPermission: (module: string) => boolean;
+  hasPermission: (module: ModuleKey) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -65,32 +66,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const hasRole = (...roles: string[]) => {
-    if (!user) return false;
-    return roles.includes(user.role);
-  };
+  const hasRole = useCallback(
+    (...roles: string[]) => (user ? roles.includes(user.role) : false),
+    [user],
+  );
 
-  const hasPermission = (module: string) => {
-    if (!user) return false;
-    // SUPER_ADMIN has access to everything
-    if (user.role === 'SUPER_ADMIN') return true;
-    
-    // Check specific permission if it exists
-    if (user.permissions && Object.keys(user.permissions).length > 0) {
-      return !!user.permissions[module];
-    }
+  // DIQQAT: bu faqat MENYUNI yashiradi. Haqiqiy to'siq backend'da
+  // (apps/accounts/permissions.py -> HasModulePermission).
+  const hasPermission = useCallback(
+    (module: ModuleKey) => {
+      if (!user) return false;
+      if (user.role === 'SUPER_ADMIN') return true;
 
-    // Fallback based on roles if permissions are empty (legacy mode)
-    const adminModules = ['dashboard', 'products', 'categories', 'customers', 'debts', 'expenses', 'reports', 'notifications', 'pos'];
-    const cashierModules = ['dashboard', 'pos', 'products', 'categories', 'customers', 'debts', 'notifications'];
-    const warehouseModules = ['dashboard', 'products', 'categories', 'notifications'];
+      // Backend rol standartlari va bekor qilishlarni allaqachon birlashtirib
+      // yuborgan — shuni to'g'ridan to'g'ri o'qiymiz.
+      const effective = user.effective_permissions;
+      if (effective && Object.keys(effective).length > 0) {
+        return effective[module] === true;
+      }
 
-    if (user.role === 'ADMIN') return adminModules.includes(module);
-    if (user.role === 'CASHIER') return cashierModules.includes(module);
-    if (user.role === 'WAREHOUSE_MANAGER') return warehouseModules.includes(module);
-
-    return false;
-  };
+      // Zaxira: eski backend javobi.
+      const overrides = user.permissions;
+      if (overrides && module in overrides) {
+        return overrides[module] === true;
+      }
+      return (DEFAULT_ROLE_MODULES[user.role] ?? []).includes(module);
+    },
+    [user],
+  );
 
   return (
     <AuthContext.Provider

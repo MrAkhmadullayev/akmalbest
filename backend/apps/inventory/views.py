@@ -5,10 +5,9 @@ from django.db import models
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics, status, viewsets
 from rest_framework.filters import OrderingFilter, SearchFilter
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from apps.accounts.permissions import IsAdminOrWarehouseManager
+from apps.accounts.permissions import HasModulePermission, IsAdminOrWarehouseManager
 from apps.products.models import Product
 
 from .models import Inventory, InventoryTransaction
@@ -19,7 +18,8 @@ from .services import InventoryService
 class InventoryViewSet(viewsets.ReadOnlyModelViewSet):
     """List inventory with stock status."""
     serializer_class = InventorySerializer
-    permission_classes = [IsAuthenticated]
+    required_module = 'inventory'
+    permission_classes = [HasModulePermission]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     search_fields = ['product__name', 'product__barcode']
     ordering_fields = ['quantity', 'updated_at', 'product__name']
@@ -40,7 +40,8 @@ class InventoryViewSet(viewsets.ReadOnlyModelViewSet):
 class InventoryAdjustView(generics.CreateAPIView):
     """Manual stock adjustment endpoint."""
     serializer_class = InventoryAdjustSerializer
-    permission_classes = [IsAdminOrWarehouseManager]
+    required_module = 'inventory'
+    permission_classes = [HasModulePermission, IsAdminOrWarehouseManager]
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -71,7 +72,8 @@ class InventoryAdjustView(generics.CreateAPIView):
 class InventoryTransactionViewSet(viewsets.ReadOnlyModelViewSet):
     """View inventory transaction history."""
     serializer_class = InventoryTransactionSerializer
-    permission_classes = [IsAuthenticated]
+    required_module = 'inventory'
+    permission_classes = [HasModulePermission]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['product', 'transaction_type']
     search_fields = ['product__name', 'product__barcode', 'notes']

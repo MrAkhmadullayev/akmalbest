@@ -3,11 +3,10 @@ from decimal import Decimal
 
 from django.db.models import Count, F, Sum
 from django.utils import timezone
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.accounts.permissions import IsAdmin
+from apps.accounts.permissions import HasModulePermission
 from apps.debts.models import Debt, DebtStatus
 from apps.expenses.models import Expense
 from apps.products.models import Product
@@ -16,7 +15,8 @@ from apps.sales.models import Sale, SaleItem, SaleStatus
 
 class DashboardView(APIView):
     """Dashboard statistics - all data from database."""
-    permission_classes = [IsAuthenticated]
+    required_module = 'dashboard'
+    permission_classes = [HasModulePermission]
 
     def get(self, request):
         today = timezone.now().date()
@@ -146,7 +146,8 @@ class DashboardView(APIView):
 
 class SalesReportView(APIView):
     """Sales report with date range filtering."""
-    permission_classes = [IsAdmin]
+    required_module = 'reports'
+    permission_classes = [HasModulePermission]
 
     def get(self, request):
         date_from = request.query_params.get('date_from')
@@ -204,7 +205,8 @@ class SalesReportView(APIView):
 
 class ProfitReportView(APIView):
     """Profit report."""
-    permission_classes = [IsAdmin]
+    required_module = 'reports'
+    permission_classes = [HasModulePermission]
 
     def get(self, request):
         date_from = request.query_params.get('date_from')
@@ -235,7 +237,8 @@ class ProfitReportView(APIView):
 
 class InventoryReportView(APIView):
     """Inventory report."""
-    permission_classes = [IsAuthenticated]
+    required_module = 'reports'
+    permission_classes = [HasModulePermission]
 
     def get(self, request):
         products = Product.objects.filter(is_active=True)
@@ -261,7 +264,8 @@ class InventoryReportView(APIView):
 
 class DebtReportView(APIView):
     """Debt report."""
-    permission_classes = [IsAdmin]
+    required_module = 'reports'
+    permission_classes = [HasModulePermission]
 
     def get(self, request):
         debts = Debt.objects.exclude(status=DebtStatus.PAID)

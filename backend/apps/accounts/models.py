@@ -14,6 +14,45 @@ class UserRole(models.TextChoices):
     WAREHOUSE_MANAGER = 'WAREHOUSE_MANAGER', 'Ombor mudiri'
 
 
+# Tizimdagi modullar. Frontend'dagi navigatsiya kalitlari bilan BIR XIL bo'lishi
+# shart — `frontend/app/(dashboard)/layout.tsx` va `users/page.tsx` ga qarang.
+MODULES = (
+    'dashboard',
+    'pos',
+    'products',
+    'categories',
+    'customers',
+    'debts',
+    'expenses',
+    'reports',
+    'inventory',
+    'suppliers',
+    'notifications',
+    'users',
+    'settings',
+)
+
+# Rol bo'yicha standart ruxsatlar. Bu qiymatlar mavjud rol-klasslarining
+# (IsAdmin, IsCashierOrAdmin, ...) hozirgi xatti-harakatini takrorlaydi —
+# migratsiyadan keyin hech kim ruxsatidan ayrilib qolmasligi uchun.
+# SUPER_ADMIN bu jadvalda yo'q: unga hamma narsa ochiq.
+DEFAULT_ROLE_PERMISSIONS = {
+    UserRole.ADMIN: (
+        'dashboard', 'pos', 'products', 'categories', 'customers',
+        'debts', 'expenses', 'reports', 'inventory', 'suppliers',
+        'notifications',
+    ),
+    UserRole.CASHIER: (
+        'dashboard', 'pos', 'products', 'categories', 'customers',
+        'debts', 'inventory', 'notifications',
+    ),
+    UserRole.WAREHOUSE_MANAGER: (
+        'dashboard', 'products', 'categories', 'inventory', 'suppliers',
+        'notifications',
+    ),
+}
+
+
 class UserManager(BaseUserManager):
     """Custom user manager supporting email/username login."""
 
@@ -56,6 +95,10 @@ class User(AbstractBaseUser, PermissionsMixin):
         default=UserRole.CASHIER,
         db_index=True,
     )
+    # Modul bo'yicha ruxsatlarni QO'LDA bekor qilish: {"reports": true, "pos": false}.
+    # Bo'sh {} bo'lsa rolning standart ruxsatlari ishlaydi (DEFAULT_ROLE_PERMISSIONS).
+    # Faqat shu yerda ko'rsatilgan kalitlar rol standartini bosib o'tadi.
+    permissions = models.JSONField(default=dict, blank=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -78,6 +121,32 @@ class User(AbstractBaseUser, PermissionsMixin):
     @property
     def full_name(self):
         return f"{self.first_name} {self.last_name}".strip()
+
+    @property
+    def effective_permissions(self):
+        """Rol standartlari + qo'lda kiritilgan bekor qilishlar.
+
+        Har doim BARCHA modullar uchun kalit qaytaradi, shuning uchun frontend
+        `permissions[module]` ni xavfsiz o'qiy oladi va "kalit yo'q" holatini
+        "ruxsat yo'q" dan ajratib o'tirmaydi.
+        """
+        if self.role == UserRole.SUPER_ADMIN:
+            return {module: True for module in MODULES}
+
+        allowed = DEFAULT_ROLE_PERMISSIONS.get(self.role, ())
+        result = {module: module in allowed for module in MODULES}
+
+        overrides = self.permissions if isinstance(self.permissions, dict) else {}
+        for module, value in overrides.items():
+            if module in result:
+                result[module] = bool(value)
+        return result
+
+    def has_module_permission(self, module):
+        """Foydalanuvchi `module` bo'limiga kira oladimi."""
+        if self.role == UserRole.SUPER_ADMIN:
+            return True
+        return bool(self.effective_permissions.get(module, False))
 
     @property
     def is_super_admin(self):

@@ -5,10 +5,9 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter, SearchFilter
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from apps.accounts.permissions import IsAdminOrWarehouseManager
+from apps.accounts.permissions import HasModulePermission, IsAdminOrWarehouseManager
 from apps.audit.services import AuditService
 
 from .models import Brand, Category, Product
@@ -24,6 +23,7 @@ from .serializers import (
 
 class CategoryViewSet(viewsets.ModelViewSet):
     """Category CRUD."""
+    required_module = 'categories'
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     filter_backends = [SearchFilter, OrderingFilter]
@@ -32,12 +32,13 @@ class CategoryViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ('list', 'retrieve'):
-            return [IsAuthenticated()]
-        return [IsAdminOrWarehouseManager()]
+            return [HasModulePermission()]
+        return [HasModulePermission(), IsAdminOrWarehouseManager()]
 
 
 class BrandViewSet(viewsets.ModelViewSet):
     """Brand CRUD."""
+    required_module = 'products'
     queryset = Brand.objects.all()
     serializer_class = BrandSerializer
     filter_backends = [SearchFilter, OrderingFilter]
@@ -46,12 +47,13 @@ class BrandViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ('list', 'retrieve'):
-            return [IsAuthenticated()]
-        return [IsAdminOrWarehouseManager()]
+            return [HasModulePermission()]
+        return [HasModulePermission(), IsAdminOrWarehouseManager()]
 
 
 class ProductViewSet(viewsets.ModelViewSet):
     """Product CRUD with filtering and search."""
+    required_module = 'products'
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['category', 'brand', 'is_active', 'unit']
     search_fields = ['name', 'barcode', 'description']
@@ -70,8 +72,8 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ('list', 'retrieve'):
-            return [IsAuthenticated()]
-        return [IsAdminOrWarehouseManager()]
+            return [HasModulePermission()]
+        return [HasModulePermission(), IsAdminOrWarehouseManager()]
 
     def perform_create(self, serializer):
         initial_stock = serializer.validated_data.pop('initial_stock', 0)
@@ -129,7 +131,10 @@ class ProductViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-    @action(detail=True, methods=['post'], permission_classes=[IsAdminOrWarehouseManager])
+    @action(
+        detail=True, methods=['post'],
+        permission_classes=[HasModulePermission, IsAdminOrWarehouseManager],
+    )
     def add_stock(self, request, pk=None):
         product = self.get_object()
         quantity = request.data.get('quantity', 0)
@@ -186,7 +191,8 @@ class ProductBarcodeLookupView(generics.RetrieveAPIView):
     GET /api/products/barcode/{barcode}/
     """
     serializer_class = ProductBarcodeLookupSerializer
-    permission_classes = [IsAuthenticated]
+    required_module = 'products'
+    permission_classes = [HasModulePermission]
     lookup_field = 'barcode'
 
     def get_queryset(self):

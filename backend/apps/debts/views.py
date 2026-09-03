@@ -7,7 +7,7 @@ from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.accounts.permissions import IsCashierOrAdmin
+from apps.accounts.permissions import HasModulePermission, IsCashierOrAdmin
 
 from .models import Debt, DebtPayment
 from .serializers import (
@@ -25,7 +25,8 @@ class DebtViewSet(viewsets.ReadOnlyModelViewSet):
     search_fields = ['customer__full_name', 'customer__phone']
     ordering_fields = ['due_date', 'remaining_amount', 'created_at']
     ordering = ['-created_at']
-    permission_classes = [IsCashierOrAdmin]
+    required_module = 'debts'
+    permission_classes = [HasModulePermission, IsCashierOrAdmin]
 
     def get_queryset(self):
         return Debt.objects.select_related('customer', 'sale').prefetch_related('payments').all()
@@ -52,7 +53,8 @@ class DebtViewSet(viewsets.ReadOnlyModelViewSet):
 
 class DebtPaymentCreateView(APIView):
     """Process a debt payment."""
-    permission_classes = [IsCashierOrAdmin]
+    required_module = 'debts'
+    permission_classes = [HasModulePermission, IsCashierOrAdmin]
 
     def post(self, request):
         serializer = DebtPaymentCreateSerializer(data=request.data)
@@ -89,7 +91,8 @@ class DebtPaymentCreateView(APIView):
 
 class DebtPaymentViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = DebtPaymentSerializer
-    permission_classes = [IsCashierOrAdmin]
+    required_module = 'debts'
+    permission_classes = [HasModulePermission, IsCashierOrAdmin]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ['debt', 'payment_method']
     ordering = ['-created_at']

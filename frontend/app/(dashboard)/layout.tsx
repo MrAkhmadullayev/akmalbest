@@ -1,20 +1,28 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import Link from 'next/link';
 import {
-  LayoutDashboard, ShoppingCart, Package, Warehouse,
+  LayoutDashboard, ShoppingCart, Package,
   Users, CreditCard, Wallet, BarChart3,
   Bell, UserCog, Settings, LogOut, ChevronLeft, Menu, Tags,
 } from 'lucide-react';
-import { useState } from 'react';
+import type { LucideIcon } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { notificationsService } from '@/services/notifications';
 import { debtsService } from '@/services/debts';
+import type { ModuleKey } from '@/types';
 
-const navigation = [
+type NavItem = {
+  name: string;
+  href: string;
+  icon: LucideIcon;
+  permission: ModuleKey;
+};
+
+const navigation: NavItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, permission: 'dashboard' },
   { name: 'Sotuv', href: '/pos', icon: ShoppingCart, permission: 'pos' },
   { name: 'Mahsulotlar', href: '/products', icon: Package, permission: 'products' },
@@ -33,7 +41,7 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, isAuthenticated, isLoading, logout, hasRole, hasPermission } = useAuth();
+  const { user, isAuthenticated, isLoading, logout, hasPermission } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -59,22 +67,26 @@ export default function DashboardLayout({
     enabled: isAuthenticated && hasPermission('debts'),
   });
 
-  // Xavfsizlik: Foydalanuvchi o'ziga ruxsat berilmagan sahifaga URL orqali kirmoqchi bo'lsa
+  const allowedNav = useMemo(
+    () => navigation.filter((item) => hasPermission(item.permission)),
+    [hasPermission],
+  );
+
+  // Xavfsizlik: foydalanuvchi o'ziga ruxsat berilmagan sahifaga URL orqali
+  // kirmoqchi bo'lsa, ruxsati bor birinchi bo'limga qaytaramiz.
+  // Hech qanday ruxsati bo'lmasa REDIRECT QILMAYMIZ — aks holda cheksiz
+  // yo'naltirish sikliga tushib qolardi; o'rniga xabar ko'rsatiladi.
   useEffect(() => {
-    if (isAuthenticated && !isLoading) {
-      const currentNav = navigation.find(nav => pathname.startsWith(nav.href));
-      if (currentNav && !hasPermission(currentNav.permission)) {
-        // Ruxsat yo'q bo'lsa dashboardga qaytarish (agar dashboardga ruxsati bo'lsa), bo'lmasa pos ga
-        if (hasPermission('dashboard')) {
-          router.replace('/dashboard');
-        } else if (hasPermission('pos')) {
-          router.replace('/pos');
-        } else {
-          router.replace('/');
-        }
-      }
+    if (!isAuthenticated || isLoading) return;
+
+    const currentNav = navigation.find((nav) => pathname.startsWith(nav.href));
+    if (!currentNav || hasPermission(currentNav.permission)) return;
+
+    const fallback = allowedNav[0];
+    if (fallback && fallback.href !== pathname) {
+      router.replace(fallback.href);
     }
-  }, [pathname, isAuthenticated, isLoading, hasPermission, router]);
+  }, [pathname, isAuthenticated, isLoading, hasPermission, allowedNav, router]);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -90,17 +102,29 @@ export default function DashboardLayout({
     );
   }
 
-  const filteredNav = navigation.filter((item) => {
-    // Dashboard va Notifications hamma uchun ochiq bo'lishi mumkin (yoki admin qanday belgilagan bo'lsa)
-    // Agar foydalanuvchida eski permissions yo'q bo'lsa, role orqali fallback qilish mumkin, 
-    // lekin backend'dan to'g'ri permission kelsa hasPermission ishlaydi.
-    return hasPermission(item.permission);
-  });
+  const filteredNav = allowedNav;
 
   const handleLogout = async () => {
     await logout();
     router.replace('/login');
   };
+
+  if (filteredNav.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
+        <div className="card p-8 max-w-md text-center space-y-4">
+          <h1 className="text-lg font-bold text-gray-900">Ruxsat berilmagan</h1>
+          <p className="text-sm text-gray-500">
+            Hisobingizga hech qanday bo'lim biriktirilmagan. Administratorga
+            murojaat qiling.
+          </p>
+          <button onClick={handleLogout} className="btn-primary w-full">
+            Chiqish
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const unreadCount = unreadData?.data?.count || 0;
   const dueDebtsCount = (debtsNotifyData?.data as any)?.due_debts_count || 0;

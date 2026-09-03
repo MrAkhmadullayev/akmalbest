@@ -3,6 +3,25 @@
    ========================================== */
 
 // ---- Auth & User ----
+
+/** Ruxsat berish mumkin bo'lgan bo'limlar. Backend'dagi `MODULES` bilan bir xil. */
+export type ModuleKey =
+  | 'dashboard'
+  | 'pos'
+  | 'products'
+  | 'categories'
+  | 'customers'
+  | 'debts'
+  | 'expenses'
+  | 'reports'
+  | 'inventory'
+  | 'suppliers'
+  | 'notifications'
+  | 'users'
+  | 'settings';
+
+export type ModulePermissions = Partial<Record<ModuleKey, boolean>>;
+
 export interface User {
   id: string;
   username: string;
@@ -13,7 +32,10 @@ export interface User {
   phone: string;
   role: 'SUPER_ADMIN' | 'ADMIN' | 'CASHIER' | 'WAREHOUSE_MANAGER';
   is_active: boolean;
-  permissions: Record<string, boolean>;
+  /** Faqat qo'lda kiritilgan bekor qilishlar. Eski API javoblarida bo'lmasligi mumkin. */
+  permissions?: ModulePermissions;
+  /** Rol standartlari + bekor qilishlar. Ruxsatni SHU yerdan tekshiring. */
+  effective_permissions?: ModulePermissions;
   created_at: string;
   updated_at: string;
 }

@@ -6,10 +6,9 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter, SearchFilter
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from apps.accounts.permissions import IsCashierOrAdmin
+from apps.accounts.permissions import HasModulePermission, IsCashierOrAdmin
 from apps.customers.models import Customer
 
 from .models import Payment, Sale, SaleItem
@@ -26,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 class SaleViewSet(viewsets.ModelViewSet):
+    required_module = 'pos'
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['payment_method', 'status', 'cashier']
     search_fields = ['sale_number', 'customer__full_name']
@@ -46,8 +46,8 @@ class SaleViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ('list', 'retrieve'):
-            return [IsAuthenticated()]
-        return [IsCashierOrAdmin()]
+            return [HasModulePermission()]
+        return [HasModulePermission(), IsCashierOrAdmin()]
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
@@ -194,7 +194,8 @@ class SaleViewSet(viewsets.ModelViewSet):
 
 class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = PaymentSerializer
-    permission_classes = [IsAuthenticated]
+    required_module = 'pos'
+    permission_classes = [HasModulePermission]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ['sale', 'payment_method']
     ordering = ['-created_at']

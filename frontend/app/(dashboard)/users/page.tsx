@@ -4,20 +4,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usersService } from '@/services/auth';
 import { Plus, Edit, Trash2, Shield } from 'lucide-react';
 import { useState } from 'react';
-
-const permissionOptions = [
-  { key: 'dashboard', label: 'Dashboard' },
-  { key: 'pos', label: 'Sotuv (POS)' },
-  { key: 'products', label: 'Mahsulotlar' },
-  { key: 'categories', label: 'Kategoriyalar' },
-  { key: 'customers', label: 'Mijozlar' },
-  { key: 'debts', label: 'Qarzlar' },
-  { key: 'expenses', label: 'Xarajatlar' },
-  { key: 'reports', label: 'Hisobotlar' },
-  { key: 'notifications', label: 'Bildirishnomalar' },
-  { key: 'users', label: 'Foydalanuvchilar' },
-  { key: 'settings', label: 'Sozlamalar' },
-];
+import { MODULE_LABELS, defaultPermissionsForRole } from '@/lib/permissions';
+import type { ModuleKey, ModulePermissions } from '@/types';
 
 export default function UsersPage() {
   const queryClient = useQueryClient();
@@ -28,7 +16,9 @@ export default function UsersPage() {
   const [role, setRole] = useState('CASHIER');
   const [phone, setPhone] = useState('');
   const [isActive, setIsActive] = useState(true);
-  const [permissions, setPermissions] = useState<Record<string, boolean>>({});
+  const [permissions, setPermissions] = useState<ModulePermissions>(
+    defaultPermissionsForRole('CASHIER'),
+  );
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -61,9 +51,17 @@ export default function UsersPage() {
     setPhone('');
     setIsActive(true);
     setRole('CASHIER');
-    setPermissions({});
+    setPermissions(defaultPermissionsForRole('CASHIER'));
     setShowAddForm(false);
     setEditingId(null);
+  };
+
+  // Rol almashtirilganda ruxsat katakchalarini shu rolning standartiga
+  // qaytaramiz — aks holda forma eski rolning ruxsatlarini yangi rolga
+  // qotirib yuborardi.
+  const handleRoleChange = (nextRole: string) => {
+    setRole(nextRole);
+    setPermissions(defaultPermissionsForRole(nextRole));
   };
 
   const createMutation = useMutation({
@@ -129,18 +127,25 @@ export default function UsersPage() {
     setRole(user.role);
     setPhone(user.phone || '');
     setIsActive(user.is_active !== undefined ? user.is_active : true);
-    setPermissions(user.permissions || {});
+    // Backend rol standartlari bilan birlashtirilgan yakuniy holatni yuboradi.
+    // Uni ko'rsatamiz — aks holda kassirning katakchalari bo'sh ko'rinib,
+    // "hech nimaga ruxsati yo'q" degan noto'g'ri taassurot qolardi.
+    setPermissions(
+      user.effective_permissions ?? defaultPermissionsForRole(user.role),
+    );
     setPassword('');
     setShowAddForm(true);
   };
 
   const handleDelete = (id: string) => {
-    if (confirm('Ushbu foydalanuvchini butunlay o\'chirmoqchimisiz?')) {
+    // Backend uni o'chirmaydi, NOFAOL qiladi (savdo tarixi saqlanib qolishi
+    // uchun). Matn shuni aytishi kerak.
+    if (confirm("Ushbu foydalanuvchi nofaol qilinadi va tizimga kira olmaydi. Davom etamizmi?")) {
       deleteMutation.mutate(id);
     }
   };
 
-  const handlePermissionChange = (key: string, checked: boolean) => {
+  const handlePermissionChange = (key: ModuleKey, checked: boolean) => {
     setPermissions(prev => ({
       ...prev,
       [key]: checked
@@ -287,7 +292,7 @@ export default function UsersPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Rol</label>
                 <select
                   value={role}
-                  onChange={(e) => setRole(e.target.value)}
+                  onChange={(e) => handleRoleChange(e.target.value)}
                   className="input"
                   required
                 >
@@ -323,12 +328,17 @@ export default function UsersPage() {
 
               {/* Ruxsatlar (Permissions) bo'limi */}
               <div className="pt-4 border-t border-gray-200">
-                <label className="block text-sm font-semibold text-gray-900 mb-3">Tizim bo'limlariga ruxsatlar (Dostup)</label>
+                <label className="block text-sm font-semibold text-gray-900 mb-1">Tizim bo'limlariga ruxsatlar</label>
+                <p className="text-xs text-gray-500 mb-3">
+                  Katakchalar tanlangan rolning standart ruxsatlari bilan
+                  to'ldirilgan. O'zgartirsangiz shu foydalanuvchiga aynan shu
+                  ro'yxat biriktiriladi.
+                </p>
                 {role === 'SUPER_ADMIN' ? (
                   <div className="text-sm text-gray-500 bg-gray-50 p-3 rounded-lg">Super Admin barcha bo'limlarga to'liq huquqqa ega.</div>
                 ) : (
                   <div className="grid grid-cols-2 gap-3">
-                    {permissionOptions.map(opt => (
+                    {MODULE_LABELS.map(opt => (
                       <div key={opt.key} className="flex items-center gap-2">
                         <input
                           type="checkbox"

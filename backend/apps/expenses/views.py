@@ -3,7 +3,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets
 from rest_framework.filters import OrderingFilter, SearchFilter
 
-from apps.accounts.permissions import IsAdmin
+from apps.accounts.permissions import HasModulePermission, IsAdmin
 
 from .models import Expense, ExpenseCategory
 from .serializers import ExpenseCategorySerializer, ExpenseSerializer
@@ -12,13 +12,15 @@ from .serializers import ExpenseCategorySerializer, ExpenseSerializer
 class ExpenseCategoryViewSet(viewsets.ModelViewSet):
     queryset = ExpenseCategory.objects.all()
     serializer_class = ExpenseCategorySerializer
-    permission_classes = [IsAdmin]
+    required_module = 'expenses'
+    permission_classes = [HasModulePermission, IsAdmin]
     search_fields = ['name']
 
 
 class ExpenseViewSet(viewsets.ModelViewSet):
     serializer_class = ExpenseSerializer
-    permission_classes = [IsAdmin]
+    required_module = 'expenses'
+    permission_classes = [HasModulePermission, IsAdmin]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['category', 'expense_date']
     search_fields = ['title', 'description']

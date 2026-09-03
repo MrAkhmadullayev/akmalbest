@@ -1,15 +1,15 @@
 """Customer views."""
 from rest_framework import viewsets
 from rest_framework.filters import OrderingFilter, SearchFilter
-from rest_framework.permissions import IsAuthenticated
 
-from apps.accounts.permissions import IsCashierOrAdmin
+from apps.accounts.permissions import HasModulePermission, IsCashierOrAdmin
 
 from .models import Customer
 from .serializers import CustomerDetailSerializer, CustomerSerializer
 
 
 class CustomerViewSet(viewsets.ModelViewSet):
+    required_module = 'customers'
     queryset = Customer.objects.all()
     filter_backends = [SearchFilter, OrderingFilter]
     search_fields = ['full_name', 'phone']
@@ -18,8 +18,8 @@ class CustomerViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ('list', 'retrieve'):
-            return [IsAuthenticated()]
-        return [IsCashierOrAdmin()]
+            return [HasModulePermission()]
+        return [HasModulePermission(), IsCashierOrAdmin()]
 
     def get_serializer_class(self):
         if self.action == 'retrieve':
