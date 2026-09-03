@@ -11,10 +11,14 @@ import {
 import Link from 'next/link';
 
 export default function DashboardPage() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ['dashboard'],
     queryFn: () => reportsService.getDashboard(),
     refetchInterval: 60000,
+    retry: (failureCount, err: any) => {
+      if (err?.response?.status === 403) return false;
+      return failureCount < 1;
+    },
   });
 
   const dashboard = data?.data;
@@ -29,6 +33,21 @@ export default function DashboardPage() {
               <div key={i} className="h-32 bg-gray-200 rounded-xl"></div>
             ))}
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="p-8">
+        <div className="card p-8 text-center">
+          <p className="text-red-500 font-semibold text-lg">Ma&apos;lumotlarni yuklashda xatolik!</p>
+          <p className="text-gray-400 mt-2">
+            {(error as any)?.response?.status === 403
+              ? "Sizda Dashboard bo'limiga ruxsat yo'q. Administrator bilan bog'laning."
+              : "Server bilan aloqa uzildi. Sahifani qayta yuklang."}
+          </p>
         </div>
       </div>
     );

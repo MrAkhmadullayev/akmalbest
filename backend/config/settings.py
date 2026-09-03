@@ -246,8 +246,8 @@ REST_FRAMEWORK = {
         'rest_framework.throttling.UserRateThrottle',
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '10/minute',   # Anonim (masalan login urinishlari)
-        'user': '1000/day',    # Avtorizatsiyadan o'tganlar uchun limit
+        'anon': '30/minute',   # Anonim (masalan login urinishlari)
+        'user': '5000/day',    # Avtorizatsiyadan o'tganlar uchun limit
     },
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 25,

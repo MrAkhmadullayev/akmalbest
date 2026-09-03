@@ -30,10 +30,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       const response = await authService.me();
       setUser(response.data);
-    } catch {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      setUser(null);
+    } catch (err: any) {
+      // Faqat autentifikatsiya xatosida (401) tokenlarni tozalaymiz.
+      // Tarmoq xatosi yoki boshqa server xatosi (500, 403) bo'lsa,
+      // tokenlar saqlanib qoladi — foydalanuvchi sahifani qayta
+      // yuklashi mumkin va keyingi urinishda ishlashi mumkin.
+      const status = err?.response?.status;
+      if (status === 401) {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        setUser(null);
+      } else {
+        // Token hali amal qilishi mumkin — keshlanmiš user'ni sinab ko'ramiz
+        // yoki shunchaki null qilib qo'yamiz (login'ga yo'naltiradi)
+        // Lekin tokenlarni O'CHIRMAYMIZ
+        setUser(null);
+      }
     } finally {
       setIsLoading(false);
     }

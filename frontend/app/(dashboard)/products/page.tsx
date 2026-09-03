@@ -22,7 +22,7 @@ export default function ProductsPage() {
     queryFn: () => categoriesService.getAll({ page_size: '100' }),
   });
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ['products', search, category, page, showInactive],
     queryFn: () => {
       const params: any = {
@@ -34,7 +34,12 @@ export default function ProductsPage() {
         params.is_active = 'true';
       }
       return productsService.getAll(params);
-    }
+    },
+    retry: (failureCount, err: any) => {
+      // 403 (ruxsat yo'q) xatosini qayta urinmaymiz
+      if (err?.response?.status === 403) return false;
+      return failureCount < 1;
+    },
   });
 
   const deleteMutation = useMutation({
@@ -141,6 +146,15 @@ export default function ProductsPage() {
       <div className="card overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center text-gray-500">Yuklanmoqda...</div>
+        ) : isError ? (
+          <div className="p-8 text-center text-red-500">
+            <p className="font-semibold">Ma&apos;lumotlarni yuklashda xatolik!</p>
+            <p className="text-sm text-gray-400 mt-1">
+              {(error as any)?.response?.status === 403
+                ? "Sizda bu bo'limga ruxsat yo'q. Administrator bilan bog'laning."
+                : "Server bilan aloqa uzildi. Sahifani qayta yuklang."}
+            </p>
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="data-table">
