@@ -131,7 +131,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         "ruxsat yo'q" dan ajratib o'tirmaydi.
         """
         if self.role == UserRole.SUPER_ADMIN:
-            return {module: True for module in MODULES}
+            return dict.fromkeys(MODULES, True)
 
         allowed = DEFAULT_ROLE_PERMISSIONS.get(self.role, ())
         result = {module: module in allowed for module in MODULES}

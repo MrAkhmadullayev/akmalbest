@@ -34,7 +34,7 @@ class EffectivePermissionsTests(CacheIsolatedAPITestCase):
         user = User.objects.create_user(
             username='boss', password=STRONG_PASSWORD, role=UserRole.SUPER_ADMIN,
         )
-        self.assertEqual(user.effective_permissions, {m: True for m in MODULES})
+        self.assertEqual(user.effective_permissions, dict.fromkeys(MODULES, True))
 
     def test_role_defaults_apply_when_no_overrides(self):
         cashier = User.objects.create_user(
