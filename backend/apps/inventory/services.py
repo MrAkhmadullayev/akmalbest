@@ -1,6 +1,7 @@
 """
 Inventory service layer - handles all stock mutations with locking.
 """
+
 from django.db import transaction
 
 from apps.inventory.models import Inventory, InventoryTransaction, TransactionType
@@ -16,22 +17,31 @@ class InventoryService:
 
     @staticmethod
     @transaction.atomic
-    def increase_stock(product, quantity, transaction_type, reference_id='',
-                       reference_type='', user=None, notes='',
-                       purchase_price=None, payment_method=None):
+    def increase_stock(
+        product,
+        quantity,
+        transaction_type,
+        reference_id="",
+        reference_type="",
+        user=None,
+        notes="",
+        purchase_price=None,
+        payment_method=None,
+    ):
         """Increase product stock (purchase, return, adjustment)."""
         inventory = Inventory.objects.select_for_update().get(product=product)
         previous_quantity = inventory.quantity
         new_quantity = previous_quantity + quantity
 
         inventory.quantity = new_quantity
-        inventory.save(update_fields=['quantity', 'updated_at'])
+        inventory.save(update_fields=["quantity", "updated_at"])
 
         # Sync denormalized field
         Product.objects.filter(pk=product.pk).update(current_stock=new_quantity)
 
         # Create batch if purchase price is provided
         from apps.inventory.models import BatchPaymentMethod, InventoryBatch
+
         if purchase_price is not None:
             InventoryBatch.objects.create(
                 product=product,
@@ -39,7 +49,7 @@ class InventoryService:
                 current_quantity=quantity,
                 purchase_price=purchase_price,
                 payment_method=payment_method or BatchPaymentMethod.CASH,
-                reference_id=str(reference_id)
+                reference_id=str(reference_id),
             )
 
         # Create transaction record
@@ -59,8 +69,7 @@ class InventoryService:
 
     @staticmethod
     @transaction.atomic
-    def decrease_stock(product, quantity, transaction_type, reference_id='',
-                       reference_type='', user=None, notes=''):
+    def decrease_stock(product, quantity, transaction_type, reference_id="", reference_type="", user=None, notes=""):
         """
         Decrease product stock (sale, adjustment, damage).
         Raises ValueError if insufficient stock.
@@ -72,14 +81,16 @@ class InventoryService:
 
         from apps.inventory.models import BatchPaymentMethod, InventoryBatch
 
-        cogs_cash = Decimal('0')
-        cogs_debt = Decimal('0')
+        cogs_cash = Decimal("0")
+        cogs_debt = Decimal("0")
 
         # FIFO logic
         remaining_to_decrease = quantity
-        batches = InventoryBatch.objects.filter(
-            product=product, current_quantity__gt=0
-        ).order_by('created_at').select_for_update()
+        batches = (
+            InventoryBatch.objects.filter(product=product, current_quantity__gt=0)
+            .order_by("created_at")
+            .select_for_update()
+        )
 
         for batch in batches:
             if remaining_to_decrease <= 0:
@@ -88,13 +99,13 @@ class InventoryService:
             if batch.current_quantity >= remaining_to_decrease:
                 deducted = remaining_to_decrease
                 batch.current_quantity -= deducted
-                batch.save(update_fields=['current_quantity'])
+                batch.save(update_fields=["current_quantity"])
                 remaining_to_decrease = 0
             else:
                 deducted = batch.current_quantity
                 remaining_to_decrease -= deducted
                 batch.current_quantity = 0
-                batch.save(update_fields=['current_quantity'])
+                batch.save(update_fields=["current_quantity"])
 
             cost = deducted * batch.purchase_price
             if batch.payment_method == BatchPaymentMethod.CASH:
@@ -108,7 +119,7 @@ class InventoryService:
 
         new_quantity = previous_quantity - quantity
         inventory.quantity = new_quantity
-        inventory.save(update_fields=['quantity', 'updated_at'])
+        inventory.save(update_fields=["quantity", "updated_at"])
 
         # Sync denormalized field
         Product.objects.filter(pk=product.pk).update(current_stock=new_quantity)
@@ -134,7 +145,7 @@ class InventoryService:
 
     @staticmethod
     @transaction.atomic
-    def adjust_stock(product, new_quantity, user=None, notes=''):
+    def adjust_stock(product, new_quantity, user=None, notes=""):
         """Set stock to a specific quantity (manual adjustment)."""
         inventory = Inventory.objects.select_for_update().get(product=product)
         previous_quantity = inventory.quantity
@@ -146,7 +157,7 @@ class InventoryService:
         tx_type = TransactionType.ADJUSTMENT_IN if diff > 0 else TransactionType.ADJUSTMENT_OUT
 
         inventory.quantity = new_quantity
-        inventory.save(update_fields=['quantity', 'updated_at'])
+        inventory.save(update_fields=["quantity", "updated_at"])
 
         Product.objects.filter(pk=product.pk).update(current_stock=new_quantity)
 
@@ -156,7 +167,7 @@ class InventoryService:
             quantity=abs(diff),
             previous_quantity=previous_quantity,
             new_quantity=new_quantity,
-            reference_type='ADJUSTMENT',
+            reference_type="ADJUSTMENT",
             created_by=user,
             notes=notes or f"Qo'lda tuzatish: {previous_quantity} → {new_quantity}",
         )

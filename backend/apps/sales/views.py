@@ -1,4 +1,5 @@
 """Sale views."""
+
 import logging
 from decimal import Decimal
 
@@ -25,22 +26,20 @@ logger = logging.getLogger(__name__)
 
 
 class SaleViewSet(viewsets.ModelViewSet):
-    required_module = 'pos'
+    required_module = "pos"
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['payment_method', 'status', 'cashier']
-    search_fields = ['sale_number', 'customer__full_name']
-    ordering_fields = ['created_at', 'total']
-    ordering = ['-created_at']
+    filterset_fields = ["payment_method", "status", "cashier"]
+    search_fields = ["sale_number", "customer__full_name"]
+    ordering_fields = ["created_at", "total"]
+    ordering = ["-created_at"]
 
     def get_queryset(self):
-        return Sale.objects.select_related(
-            'cashier', 'customer'
-        ).prefetch_related('items', 'payments').all()
+        return Sale.objects.select_related("cashier", "customer").prefetch_related("items", "payments").all()
 
     def get_serializer_class(self):
-        if self.action == 'list':
+        if self.action == "list":
             return SaleListSerializer
-        if self.action == 'create':
+        if self.action == "create":
             return SaleCreateSerializer
         return SaleDetailSerializer
 
@@ -49,7 +48,7 @@ class SaleViewSet(viewsets.ModelViewSet):
         # POS bo'limiga ruxsati borligini tekshiradi. Qo'shimcha rol tekshiruvi
         # (IsCashierOrAdmin) ombor mudiri kabi ruxsat berilgan rollarga to'siq
         # bo'lardi.
-        if self.action in ('list', 'retrieve', 'metadata'):
+        if self.action in ("list", "retrieve", "metadata"):
             return [HasModulePermission()]
         return [HasModulePermission()]
 
@@ -62,24 +61,21 @@ class SaleViewSet(viewsets.ModelViewSet):
         from django.db.models import Sum
 
         summary = {
-            'total_sales': queryset.aggregate(t=Sum('total'))['t'] or Decimal('0'),
-            'cash_sales': queryset.filter(payment_method='CASH').aggregate(t=Sum('total'))['t'] or Decimal('0'),
-            'card_sales': queryset.filter(payment_method='CARD').aggregate(t=Sum('total'))['t'] or Decimal('0'),
-            'debt_sales': queryset.filter(payment_method='DEBT').aggregate(t=Sum('total'))['t'] or Decimal('0'),
+            "total_sales": queryset.aggregate(t=Sum("total"))["t"] or Decimal("0"),
+            "cash_sales": queryset.filter(payment_method="CASH").aggregate(t=Sum("total"))["t"] or Decimal("0"),
+            "card_sales": queryset.filter(payment_method="CARD").aggregate(t=Sum("total"))["t"] or Decimal("0"),
+            "debt_sales": queryset.filter(payment_method="DEBT").aggregate(t=Sum("total"))["t"] or Decimal("0"),
         }
 
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
             response = self.get_paginated_response(serializer.data)
-            response.data['summary'] = summary
+            response.data["summary"] = summary
             return response
 
         serializer = self.get_serializer(queryset, many=True)
-        return Response({
-            'results': serializer.data,
-            'summary': summary
-        })
+        return Response({"results": serializer.data, "summary": summary})
 
     def create(self, request, *args, **kwargs):
         serializer = SaleCreateSerializer(data=request.data)
@@ -87,98 +83,95 @@ class SaleViewSet(viewsets.ModelViewSet):
         data = serializer.validated_data
 
         customer = None
-        if data.get('customer_id'):
+        if data.get("customer_id"):
             try:
-                customer = Customer.objects.get(pk=data['customer_id'])
+                customer = Customer.objects.get(pk=data["customer_id"])
             except Customer.DoesNotExist:
                 return Response(
-                    {"success": False, "message": "Mijoz topilmadi.", "errors": {}},
-                    status=status.HTTP_404_NOT_FOUND
+                    {"success": False, "message": "Mijoz topilmadi.", "errors": {}}, status=status.HTTP_404_NOT_FOUND
                 )
-        elif data.get('customer_name'):
-            customer_name = data['customer_name'].strip()
-            customer_phone = data.get('customer_phone', '').strip()
+        elif data.get("customer_name"):
+            customer_name = data["customer_name"].strip()
+            customer_phone = data.get("customer_phone", "").strip()
             customer, created = Customer.objects.get_or_create(
-                full_name=customer_name,
-                defaults={'phone': customer_phone}
+                full_name=customer_name, defaults={"phone": customer_phone}
             )
             if not created and customer_phone and customer.phone != customer_phone:
                 customer.phone = customer_phone
-                customer.save(update_fields=['phone', 'updated_at'])
+                customer.save(update_fields=["phone", "updated_at"])
 
         try:
             sale, change_amount = SaleService.create_sale(
-                items_data=data['items'],
-                payment_method=data['payment_method'],
+                items_data=data["items"],
+                payment_method=data["payment_method"],
                 cashier=request.user,
                 customer=customer,
-                discount=Decimal(str(data.get('discount', 0))),
-                paid_amount=data.get('paid_amount'),
-                due_date=data.get('due_date'),
+                discount=Decimal(str(data.get("discount", 0))),
+                paid_amount=data.get("paid_amount"),
+                due_date=data.get("due_date"),
             )
         except ValueError as e:
-            return Response(
-                {"success": False, "message": str(e), "errors": {}},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"success": False, "message": str(e), "errors": {}}, status=status.HTTP_400_BAD_REQUEST)
         except Exception:
             # Foydalanuvchiga ichki tafsilotni ko'rsatmaymiz, lekin log'siz
             # 500 xatoni keyin umuman tekshirib bo'lmaydi.
             logger.exception("Savdo yaratishda kutilmagan xatolik")
             return Response(
                 {"success": False, "message": "Savdo yaratishda xatolik yuz berdi.", "errors": {}},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-        return Response({
-            "success": True,
-            "message": "Savdo muvaffaqiyatli yakunlandi.",
-            "data": SaleDetailSerializer(sale).data,
-            "change_amount": str(change_amount),
-        }, status=status.HTTP_201_CREATED)
+        return Response(
+            {
+                "success": True,
+                "message": "Savdo muvaffaqiyatli yakunlandi.",
+                "data": SaleDetailSerializer(sale).data,
+                "change_amount": str(change_amount),
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
-    @action(detail=True, methods=['post'], url_path='return')
+    @action(detail=True, methods=["post"], url_path="return")
     def return_item(self, request, pk=None):
         """Process a sale return."""
         serializer = SaleReturnSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         try:
-            sale_item = SaleItem.objects.select_related('sale', 'product').get(
-                pk=serializer.validated_data['sale_item_id'],
+            sale_item = SaleItem.objects.select_related("sale", "product").get(
+                pk=serializer.validated_data["sale_item_id"],
                 sale_id=pk,
             )
         except SaleItem.DoesNotExist:
             return Response(
                 {"success": False, "message": "Savdo elementi topilmadi.", "errors": {}},
-                status=status.HTTP_404_NOT_FOUND
+                status=status.HTTP_404_NOT_FOUND,
             )
 
         try:
             SaleService.return_sale_item(
                 sale_item=sale_item,
-                return_quantity=serializer.validated_data['return_quantity'],
+                return_quantity=serializer.validated_data["return_quantity"],
                 user=request.user,
             )
         except ValueError as e:
-            return Response(
-                {"success": False, "message": str(e), "errors": {}},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"success": False, "message": str(e), "errors": {}}, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response({
-            "success": True,
-            "message": "Mahsulot muvaffaqiyatli qaytarildi.",
-        })
+        return Response(
+            {
+                "success": True,
+                "message": "Mahsulot muvaffaqiyatli qaytarildi.",
+            }
+        )
 
-    @action(detail=True, methods=['post'], url_path='cancel')
+    @action(detail=True, methods=["post"], url_path="cancel")
     def cancel_sale(self, request, pk=None):
         """Cancel an entire sale."""
         sale = self.get_object()
-        if sale.status != 'COMPLETED':
+        if sale.status != "COMPLETED":
             return Response(
                 {"success": False, "message": "Faqat bajarilgan savdolarni bekor qilish mumkin.", "errors": {}},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         # Return all items to inventory
@@ -187,22 +180,24 @@ class SaleViewSet(viewsets.ModelViewSet):
             if remaining > 0:
                 SaleService.return_sale_item(item, remaining, request.user)
 
-        sale.status = 'CANCELLED'
-        sale.save(update_fields=['status', 'updated_at'])
+        sale.status = "CANCELLED"
+        sale.save(update_fields=["status", "updated_at"])
 
-        return Response({
-            "success": True,
-            "message": "Savdo bekor qilindi.",
-        })
+        return Response(
+            {
+                "success": True,
+                "message": "Savdo bekor qilindi.",
+            }
+        )
 
 
 class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = PaymentSerializer
-    required_module = 'pos'
+    required_module = "pos"
     permission_classes = [HasModulePermission]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
-    filterset_fields = ['sale', 'payment_method']
-    ordering = ['-created_at']
+    filterset_fields = ["sale", "payment_method"]
+    ordering = ["-created_at"]
 
     def get_queryset(self):
-        return Payment.objects.select_related('sale', 'created_by').all()
+        return Payment.objects.select_related("sale", "created_by").all()

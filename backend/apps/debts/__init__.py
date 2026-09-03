@@ -1,1 +1,1 @@
-default_app_config = 'apps.debts.apps.DebtsConfig'
+default_app_config = "apps.debts.apps.DebtsConfig"

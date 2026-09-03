@@ -1,4 +1,5 @@
 """Customer model."""
+
 import uuid
 
 from django.db import models
@@ -15,10 +16,10 @@ class Customer(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'customers'
-        ordering = ['full_name']
-        verbose_name = 'Mijoz'
-        verbose_name_plural = 'Mijozlar'
+        db_table = "customers"
+        ordering = ["full_name"]
+        verbose_name = "Mijoz"
+        verbose_name_plural = "Mijozlar"
 
     def __str__(self):
         return self.full_name
@@ -26,5 +27,6 @@ class Customer(models.Model):
     @property
     def total_debt(self):
         from apps.debts.models import Debt
-        debts = Debt.objects.filter(customer=self).exclude(status='PAID')
+
+        debts = Debt.objects.filter(customer=self).exclude(status="PAID")
         return sum(d.remaining_amount for d in debts)

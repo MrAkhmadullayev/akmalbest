@@ -1,6 +1,7 @@
 """
 Custom User model with role-based access control.
 """
+
 import uuid
 
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
@@ -8,28 +9,28 @@ from django.db import models
 
 
 class UserRole(models.TextChoices):
-    SUPER_ADMIN = 'SUPER_ADMIN', 'Super Admin'
-    ADMIN = 'ADMIN', 'Admin'
-    CASHIER = 'CASHIER', 'Kassir'
-    WAREHOUSE_MANAGER = 'WAREHOUSE_MANAGER', 'Ombor mudiri'
+    SUPER_ADMIN = "SUPER_ADMIN", "Super Admin"
+    ADMIN = "ADMIN", "Admin"
+    CASHIER = "CASHIER", "Kassir"
+    WAREHOUSE_MANAGER = "WAREHOUSE_MANAGER", "Ombor mudiri"
 
 
 # Tizimdagi modullar. Frontend'dagi navigatsiya kalitlari bilan BIR XIL bo'lishi
 # shart — `frontend/app/(dashboard)/layout.tsx` va `users/page.tsx` ga qarang.
 MODULES = (
-    'dashboard',
-    'pos',
-    'products',
-    'categories',
-    'customers',
-    'debts',
-    'expenses',
-    'reports',
-    'inventory',
-    'suppliers',
-    'notifications',
-    'users',
-    'settings',
+    "dashboard",
+    "pos",
+    "products",
+    "categories",
+    "customers",
+    "debts",
+    "expenses",
+    "reports",
+    "inventory",
+    "suppliers",
+    "notifications",
+    "users",
+    "settings",
 )
 
 # Rol bo'yicha standart ruxsatlar. Bu qiymatlar mavjud rol-klasslarining
@@ -38,17 +39,35 @@ MODULES = (
 # SUPER_ADMIN bu jadvalda yo'q: unga hamma narsa ochiq.
 DEFAULT_ROLE_PERMISSIONS = {
     UserRole.ADMIN: (
-        'dashboard', 'pos', 'products', 'categories', 'customers',
-        'debts', 'expenses', 'reports', 'inventory', 'suppliers',
-        'notifications',
+        "dashboard",
+        "pos",
+        "products",
+        "categories",
+        "customers",
+        "debts",
+        "expenses",
+        "reports",
+        "inventory",
+        "suppliers",
+        "notifications",
     ),
     UserRole.CASHIER: (
-        'dashboard', 'pos', 'products', 'categories', 'customers',
-        'debts', 'inventory', 'notifications',
+        "dashboard",
+        "pos",
+        "products",
+        "categories",
+        "customers",
+        "debts",
+        "inventory",
+        "notifications",
     ),
     UserRole.WAREHOUSE_MANAGER: (
-        'dashboard', 'products', 'categories', 'inventory', 'suppliers',
-        'notifications',
+        "dashboard",
+        "products",
+        "categories",
+        "inventory",
+        "suppliers",
+        "notifications",
     ),
 }
 
@@ -65,15 +84,15 @@ class UserManager(BaseUserManager):
         return user
 
     def create_superuser(self, username, password=None, **extra_fields):
-        extra_fields.setdefault('is_staff', True)
-        extra_fields.setdefault('is_superuser', True)
-        extra_fields.setdefault('is_active', True)
-        extra_fields.setdefault('role', UserRole.SUPER_ADMIN)
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
+        extra_fields.setdefault("is_active", True)
+        extra_fields.setdefault("role", UserRole.SUPER_ADMIN)
 
-        if extra_fields.get('is_staff') is not True:
-            raise ValueError('Superuser must have is_staff=True.')
-        if extra_fields.get('is_superuser') is not True:
-            raise ValueError('Superuser must have is_superuser=True.')
+        if extra_fields.get("is_staff") is not True:
+            raise ValueError("Superuser must have is_staff=True.")
+        if extra_fields.get("is_superuser") is not True:
+            raise ValueError("Superuser must have is_superuser=True.")
 
         return self.create_user(username, password, **extra_fields)
 
@@ -106,14 +125,14 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     objects = UserManager()
 
-    USERNAME_FIELD = 'username'
-    REQUIRED_FIELDS = ['first_name', 'last_name']
+    USERNAME_FIELD = "username"
+    REQUIRED_FIELDS = ["first_name", "last_name"]
 
     class Meta:
-        db_table = 'users'
-        ordering = ['-created_at']
-        verbose_name = 'Foydalanuvchi'
-        verbose_name_plural = 'Foydalanuvchilar'
+        db_table = "users"
+        ordering = ["-created_at"]
+        verbose_name = "Foydalanuvchi"
+        verbose_name_plural = "Foydalanuvchilar"
 
     def __str__(self):
         return f"{self.first_name} {self.last_name} ({self.username})"

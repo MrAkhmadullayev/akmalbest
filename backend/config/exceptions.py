@@ -1,6 +1,7 @@
 """
 Custom exception handler for consistent API error responses.
 """
+
 from rest_framework.views import exception_handler
 
 
@@ -21,8 +22,8 @@ def custom_exception_handler(exc, context):
 
         if isinstance(response.data, dict):
             # Extract 'detail' key if present
-            if 'detail' in response.data:
-                message = str(response.data['detail'])
+            if "detail" in response.data:
+                message = str(response.data["detail"])
             else:
                 errors = response.data
                 # Build a human-readable message from field errors
@@ -40,9 +41,9 @@ def custom_exception_handler(exc, context):
             message = str(response.data[0]) if response.data else message
 
         response.data = {
-            'success': False,
-            'message': message,
-            'errors': errors,
+            "success": False,
+            "message": message,
+            "errors": errors,
         }
 
     return response

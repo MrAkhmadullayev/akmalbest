@@ -1,4 +1,5 @@
 """Debt service layer."""
+
 from decimal import Decimal
 
 from django.db import transaction
@@ -13,7 +14,7 @@ class DebtService:
 
     @staticmethod
     @transaction.atomic
-    def make_payment(debt, amount, payment_method, received_by, notes=''):
+    def make_payment(debt, amount, payment_method, received_by, notes=""):
         """
         Process a debt payment.
         Validates payment amount doesn't exceed remaining.
@@ -26,10 +27,7 @@ class DebtService:
         amount = Decimal(str(amount))
 
         if amount > debt.remaining_amount:
-            raise ValueError(
-                f"To'lov miqdori qarz qoldig'idan oshib ketdi. "
-                f"Qoldiq: {debt.remaining_amount} UZS"
-            )
+            raise ValueError(f"To'lov miqdori qarz qoldig'idan oshib ketdi. Qoldiq: {debt.remaining_amount} UZS")
 
         # Create payment record
         payment = DebtPayment.objects.create(
@@ -45,23 +43,23 @@ class DebtService:
         debt.remaining_amount -= amount
 
         if debt.remaining_amount <= 0:
-            debt.remaining_amount = Decimal('0')
+            debt.remaining_amount = Decimal("0")
             debt.status = DebtStatus.PAID
         elif debt.paid_amount > 0:
             debt.status = DebtStatus.PARTIALLY_PAID
 
-        debt.save(update_fields=['paid_amount', 'remaining_amount', 'status', 'updated_at'])
+        debt.save(update_fields=["paid_amount", "remaining_amount", "status", "updated_at"])
 
         # Audit
         AuditService.log(
             user=received_by,
-            action='PAYMENT',
-            model_name='Debt',
+            action="PAYMENT",
+            model_name="Debt",
             object_id=str(debt.id),
             new_data={
-                'payment_amount': str(amount),
-                'remaining': str(debt.remaining_amount),
-                'status': debt.status,
+                "payment_amount": str(amount),
+                "remaining": str(debt.remaining_amount),
+                "status": debt.status,
             },
         )
 

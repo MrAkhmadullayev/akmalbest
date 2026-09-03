@@ -5,5 +5,5 @@ from .models import Customer
 
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
-    list_display = ['full_name', 'phone', 'is_active', 'created_at']
-    search_fields = ['full_name', 'phone']
+    list_display = ["full_name", "phone", "is_active", "created_at"]
+    search_fields = ["full_name", "phone"]

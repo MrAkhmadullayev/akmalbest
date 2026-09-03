@@ -1,1 +1,1 @@
-default_app_config = 'apps.expenses.apps.ExpensesConfig'
+default_app_config = "apps.expenses.apps.ExpensesConfig"

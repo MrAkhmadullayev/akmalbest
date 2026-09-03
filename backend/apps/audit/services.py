@@ -1,4 +1,5 @@
 """Audit service for logging important actions."""
+
 from .models import AuditLog
 
 
@@ -6,7 +7,7 @@ class AuditService:
     """Centralized audit logging."""
 
     @staticmethod
-    def log(user, action, model_name, object_id='', old_data=None, new_data=None, ip_address=None):
+    def log(user, action, model_name, object_id="", old_data=None, new_data=None, ip_address=None):
         """Create an audit log entry."""
         try:
             AuditLog.objects.create(

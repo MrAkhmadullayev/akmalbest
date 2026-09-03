@@ -1,6 +1,7 @@
 """
 Sale service layer - handles complete sale lifecycle with atomic transactions.
 """
+
 from decimal import Decimal
 
 from django.db import transaction
@@ -24,13 +25,11 @@ class SaleService:
     def generate_sale_number():
         """Generate unique sale number: YYYYMMDD-XXXX."""
         today = timezone.now()
-        prefix = today.strftime('%Y%m%d')
-        last_sale = Sale.objects.filter(
-            sale_number__startswith=prefix
-        ).order_by('-sale_number').first()
+        prefix = today.strftime("%Y%m%d")
+        last_sale = Sale.objects.filter(sale_number__startswith=prefix).order_by("-sale_number").first()
 
         if last_sale:
-            last_num = int(last_sale.sale_number.split('-')[1])
+            last_num = int(last_sale.sale_number.split("-")[1])
             new_num = last_num + 1
         else:
             new_num = 1
@@ -39,8 +38,9 @@ class SaleService:
 
     @staticmethod
     @transaction.atomic
-    def create_sale(items_data, payment_method, cashier, customer=None,
-                    discount=Decimal('0'), paid_amount=None, due_date=None):
+    def create_sale(
+        items_data, payment_method, cashier, customer=None, discount=Decimal("0"), paid_amount=None, due_date=None
+    ):
         """
         Create a complete sale with atomic guarantees.
 
@@ -53,14 +53,12 @@ class SaleService:
         """
         # 1. Validate and lock products
         sale_items = []
-        subtotal = Decimal('0')
+        subtotal = Decimal("0")
 
         for item_data in items_data:
-            product = Product.objects.select_for_update().get(
-                pk=item_data['product_id'], is_active=True
-            )
-            qty = int(item_data['quantity'])
-            item_discount = Decimal(str(item_data.get('discount', '0')))
+            product = Product.objects.select_for_update().get(pk=item_data["product_id"], is_active=True)
+            qty = int(item_data["quantity"])
+            item_discount = Decimal(str(item_data.get("discount", "0")))
 
             # Stock validation
             if product.current_stock < qty:
@@ -71,19 +69,21 @@ class SaleService:
 
             item_subtotal = (product.selling_price * qty) - item_discount
 
-            sale_items.append({
-                'product': product,
-                'quantity': qty,
-                'discount': item_discount,
-                'subtotal': item_subtotal,
-            })
+            sale_items.append(
+                {
+                    "product": product,
+                    "quantity": qty,
+                    "discount": item_discount,
+                    "subtotal": item_subtotal,
+                }
+            )
 
             subtotal += item_subtotal
 
         # 2. Calculate totals (backend authoritative)
         grand_total = subtotal - discount
         if grand_total < 0:
-            grand_total = Decimal('0')
+            grand_total = Decimal("0")
 
         # 3. Create sale
         sale = Sale.objects.create(
@@ -93,33 +93,33 @@ class SaleService:
             subtotal=subtotal,
             discount=discount,
             total=grand_total,
-            profit=Decimal('0'),
-            total_cogs_cash=Decimal('0'),
-            total_cogs_debt=Decimal('0'),
+            profit=Decimal("0"),
+            total_cogs_cash=Decimal("0"),
+            total_cogs_debt=Decimal("0"),
             payment_method=payment_method,
             status=SaleStatus.COMPLETED,
         )
 
         # 4. Create sale items with snapshots & decrease inventory
-        total_profit = Decimal('0')
-        total_cogs_cash = Decimal('0')
-        total_cogs_debt = Decimal('0')
+        total_profit = Decimal("0")
+        total_cogs_cash = Decimal("0")
+        total_cogs_debt = Decimal("0")
 
         for item in sale_items:
-            product = item['product']
+            product = item["product"]
 
             # Decrease inventory with locking
             new_qty, cogs_cash, cogs_debt = InventoryService.decrease_stock(
                 product=product,
-                quantity=item['quantity'],
+                quantity=item["quantity"],
                 transaction_type=TransactionType.SALE,
                 reference_id=str(sale.id),
-                reference_type='SALE',
+                reference_type="SALE",
                 user=cashier,
                 notes=f"Savdo: {sale.sale_number}",
             )
 
-            item_profit = item['subtotal'] - (cogs_cash + cogs_debt)
+            item_profit = item["subtotal"] - (cogs_cash + cogs_debt)
             total_profit += item_profit
             total_cogs_cash += cogs_cash
             total_cogs_debt += cogs_debt
@@ -131,9 +131,9 @@ class SaleService:
                 barcode_snapshot=product.barcode,
                 purchase_price_snapshot=product.purchase_price,
                 selling_price_snapshot=product.selling_price,
-                quantity=item['quantity'],
-                discount=item['discount'],
-                subtotal=item['subtotal'],
+                quantity=item["quantity"],
+                discount=item["discount"],
+                subtotal=item["subtotal"],
                 profit=item_profit,
                 cogs_cash=cogs_cash,
                 cogs_debt=cogs_debt,
@@ -142,10 +142,10 @@ class SaleService:
         sale.profit = total_profit
         sale.total_cogs_cash = total_cogs_cash
         sale.total_cogs_debt = total_cogs_debt
-        sale.save(update_fields=['profit', 'total_cogs_cash', 'total_cogs_debt'])
+        sale.save(update_fields=["profit", "total_cogs_cash", "total_cogs_debt"])
 
         # 5. Create payment record
-        change_amount = Decimal('0')
+        change_amount = Decimal("0")
         if payment_method == PaymentMethod.CASH:
             actual_paid = Decimal(str(paid_amount)) if paid_amount else grand_total
             change_amount = actual_paid - grand_total
@@ -168,28 +168,29 @@ class SaleService:
                 raise ValueError("Nasiya savdo uchun muddat kiritilishi shart.")
 
             from apps.debts.models import Debt
+
             Debt.objects.create(
                 customer=customer,
                 sale=sale,
                 original_amount=grand_total,
-                paid_amount=Decimal('0'),
+                paid_amount=Decimal("0"),
                 remaining_amount=grand_total,
                 debt_date=timezone.now().date(),
                 due_date=due_date,
-                status='ACTIVE',
+                status="ACTIVE",
             )
 
         # 7. Audit log
         AuditService.log(
             user=cashier,
-            action='CREATE',
-            model_name='Sale',
+            action="CREATE",
+            model_name="Sale",
             object_id=str(sale.id),
             new_data={
-                'sale_number': sale.sale_number,
-                'total': str(sale.total),
-                'payment_method': sale.payment_method,
-                'items_count': len(sale_items),
+                "sale_number": sale.sale_number,
+                "total": str(sale.total),
+                "payment_method": sale.payment_method,
+                "items_count": len(sale_items),
             },
         )
 
@@ -206,8 +207,7 @@ class SaleService:
 
         if return_quantity > available_to_return:
             raise ValueError(
-                f"Qaytarish miqdori sotilgan miqdordan oshib ketdi. "
-                f"Qaytarish mumkin: {available_to_return}"
+                f"Qaytarish miqdori sotilgan miqdordan oshib ketdi. Qaytarish mumkin: {available_to_return}"
             )
 
         # Increase inventory
@@ -216,14 +216,14 @@ class SaleService:
             quantity=return_quantity,
             transaction_type=TransactionType.RETURN,
             reference_id=str(sale_item.sale.id),
-            reference_type='SALE_RETURN',
+            reference_type="SALE_RETURN",
             user=user,
             notes=f"Qaytarish: {sale_item.sale.sale_number} - {sale_item.product_name_snapshot}",
         )
 
         # Update sale item
         sale_item.returned_quantity += return_quantity
-        sale_item.save(update_fields=['returned_quantity'])
+        sale_item.save(update_fields=["returned_quantity"])
 
         # Update sale status
         sale = sale_item.sale
@@ -235,18 +235,18 @@ class SaleService:
             sale.status = SaleStatus.RETURNED
         elif any_returned:
             sale.status = SaleStatus.PARTIALLY_RETURNED
-        sale.save(update_fields=['status', 'updated_at'])
+        sale.save(update_fields=["status", "updated_at"])
 
         # Audit log
         AuditService.log(
             user=user,
-            action='RETURN',
-            model_name='SaleItem',
+            action="RETURN",
+            model_name="SaleItem",
             object_id=str(sale_item.id),
             new_data={
-                'sale_number': sale.sale_number,
-                'product': sale_item.product_name_snapshot,
-                'return_quantity': return_quantity,
+                "sale_number": sale.sale_number,
+                "product": sale_item.product_name_snapshot,
+                "return_quantity": return_quantity,
             },
         )
 

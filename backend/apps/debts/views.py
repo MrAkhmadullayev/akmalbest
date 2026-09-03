@@ -1,4 +1,5 @@
 """Debt views."""
+
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
@@ -21,39 +22,33 @@ from .services import DebtService
 
 class DebtViewSet(viewsets.ReadOnlyModelViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['status', 'customer']
-    search_fields = ['customer__full_name', 'customer__phone']
-    ordering_fields = ['due_date', 'remaining_amount', 'created_at']
-    ordering = ['-created_at']
-    required_module = 'debts'
+    filterset_fields = ["status", "customer"]
+    search_fields = ["customer__full_name", "customer__phone"]
+    ordering_fields = ["due_date", "remaining_amount", "created_at"]
+    ordering = ["-created_at"]
+    required_module = "debts"
     permission_classes = [HasModulePermission, IsCashierOrAdmin]
 
     def get_queryset(self):
-        return Debt.objects.select_related('customer', 'sale').prefetch_related('payments').all()
+        return Debt.objects.select_related("customer", "sale").prefetch_related("payments").all()
 
     def get_serializer_class(self):
-        if self.action == 'retrieve':
+        if self.action == "retrieve":
             return DebtDetailSerializer
         return DebtListSerializer
 
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=["get"])
     def notifications(self, request):
         today = timezone.now().date()
-        due_debts_count = Debt.objects.filter(
-            due_date__lte=today
-        ).exclude(status='PAID').count()
+        due_debts_count = Debt.objects.filter(due_date__lte=today).exclude(status="PAID").count()
 
-        return Response({
-            "success": True,
-            "data": {
-                "due_debts_count": due_debts_count
-            }
-        })
+        return Response({"success": True, "data": {"due_debts_count": due_debts_count}})
 
 
 class DebtPaymentCreateView(APIView):
     """Process a debt payment."""
-    required_module = 'debts'
+
+    required_module = "debts"
     permission_classes = [HasModulePermission, IsCashierOrAdmin]
 
     def post(self, request):
@@ -61,41 +56,40 @@ class DebtPaymentCreateView(APIView):
         serializer.is_valid(raise_exception=True)
 
         try:
-            debt = Debt.objects.get(pk=serializer.validated_data['debt_id'])
+            debt = Debt.objects.get(pk=serializer.validated_data["debt_id"])
         except Debt.DoesNotExist:
             return Response(
-                {"success": False, "message": "Qarz topilmadi.", "errors": {}},
-                status=status.HTTP_404_NOT_FOUND
+                {"success": False, "message": "Qarz topilmadi.", "errors": {}}, status=status.HTTP_404_NOT_FOUND
             )
 
         try:
             payment = DebtService.make_payment(
                 debt=debt,
-                amount=serializer.validated_data['amount'],
-                payment_method=serializer.validated_data['payment_method'],
+                amount=serializer.validated_data["amount"],
+                payment_method=serializer.validated_data["payment_method"],
                 received_by=request.user,
-                notes=serializer.validated_data.get('notes', ''),
+                notes=serializer.validated_data.get("notes", ""),
             )
         except ValueError as e:
-            return Response(
-                {"success": False, "message": str(e), "errors": {}},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"success": False, "message": str(e), "errors": {}}, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response({
-            "success": True,
-            "message": "To'lov muvaffaqiyatli qabul qilindi.",
-            "data": DebtPaymentSerializer(payment).data,
-        }, status=status.HTTP_201_CREATED)
+        return Response(
+            {
+                "success": True,
+                "message": "To'lov muvaffaqiyatli qabul qilindi.",
+                "data": DebtPaymentSerializer(payment).data,
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class DebtPaymentViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = DebtPaymentSerializer
-    required_module = 'debts'
+    required_module = "debts"
     permission_classes = [HasModulePermission, IsCashierOrAdmin]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
-    filterset_fields = ['debt', 'payment_method']
-    ordering = ['-created_at']
+    filterset_fields = ["debt", "payment_method"]
+    ordering = ["-created_at"]
 
     def get_queryset(self):
-        return DebtPayment.objects.select_related('debt__customer', 'received_by').all()
+        return DebtPayment.objects.select_related("debt__customer", "received_by").all()

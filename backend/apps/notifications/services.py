@@ -1,4 +1,5 @@
 """Notification service - creates system notifications."""
+
 from .models import Notification, NotificationType
 
 
@@ -27,21 +28,20 @@ class NotificationService:
         type_messages = {
             NotificationType.DEBT_UPCOMING: (
                 "🟡 Qarzni to'lash muddatiga yaqinlashmoqda",
-                f"{debt.customer.full_name} - {debt.remaining_amount} UZS. Muddat: {debt.due_date}"
+                f"{debt.customer.full_name} - {debt.remaining_amount} UZS. Muddat: {debt.due_date}",
             ),
             NotificationType.DEBT_DUE: (
                 "🔔 Bugun to'lash kerak",
-                f"{debt.customer.full_name} - {debt.remaining_amount} UZS. Bugun to'lash muddati."
+                f"{debt.customer.full_name} - {debt.remaining_amount} UZS. Bugun to'lash muddati.",
             ),
             NotificationType.DEBT_OVERDUE: (
                 "🔴 Qarz muddati o'tgan",
-                f"{debt.customer.full_name} - {debt.remaining_amount} UZS. Qarz muddati o'tgan!"
+                f"{debt.customer.full_name} - {debt.remaining_amount} UZS. Qarz muddati o'tgan!",
             ),
         }
 
         title, message = type_messages.get(
-            notification_type,
-            ("Qarz haqida xabar", f"{debt.customer.full_name} - {debt.remaining_amount} UZS")
+            notification_type, ("Qarz haqida xabar", f"{debt.customer.full_name} - {debt.remaining_amount} UZS")
         )
 
         Notification.objects.create(
