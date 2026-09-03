@@ -31,6 +31,8 @@ const navigation: NavItem[] = [
   { name: 'Qarzlar', href: '/debts', icon: CreditCard, permission: 'debts' },
   { name: 'Xarajatlar', href: '/expenses', icon: Wallet, permission: 'expenses' },
   { name: 'Hisobotlar', href: '/reports', icon: BarChart3, permission: 'reports' },
+  { name: 'Ombor', href: '/inventory', icon: Package, permission: 'inventory' },
+  { name: 'Yetkazib beruvchilar', href: '/suppliers', icon: Users, permission: 'suppliers' },
   { name: 'Bildirishnomalar', href: '/notifications', icon: Bell, permission: 'notifications' },
   { name: 'Foydalanuvchilar', href: '/users', icon: UserCog, permission: 'users' },
   { name: 'Sozlamalar', href: '/settings', icon: Settings, permission: 'settings' },

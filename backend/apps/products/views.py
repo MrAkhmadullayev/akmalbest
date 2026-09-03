@@ -31,7 +31,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
     ordering_fields = ['name', 'created_at']
 
     def get_permissions(self):
-        if self.action in ('list', 'retrieve'):
+        if self.action in ('list', 'retrieve', 'metadata'):
             return [HasModulePermission()]
         return [HasModulePermission(), IsAdminOrWarehouseManager()]
 
@@ -46,7 +46,7 @@ class BrandViewSet(viewsets.ModelViewSet):
     ordering_fields = ['name', 'created_at']
 
     def get_permissions(self):
-        if self.action in ('list', 'retrieve'):
+        if self.action in ('list', 'retrieve', 'metadata'):
             return [HasModulePermission()]
         return [HasModulePermission(), IsAdminOrWarehouseManager()]
 
@@ -71,7 +71,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         return ProductDetailSerializer
 
     def get_permissions(self):
-        if self.action in ('list', 'retrieve'):
+        if self.action in ('list', 'retrieve', 'metadata'):
             return [HasModulePermission()]
         return [HasModulePermission(), IsAdminOrWarehouseManager()]
 
