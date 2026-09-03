@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { expensesService } from '@/services/expenses';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { Plus, Search, DollarSign } from 'lucide-react';
+import { Plus, Search, DollarSign, XCircle } from 'lucide-react';
 
 export default function ExpensesPage() {
   const queryClient = useQueryClient();
@@ -29,6 +29,22 @@ export default function ExpensesPage() {
       setShowAddForm(false);
     },
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => expensesService.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+    },
+    onError: (err: any) => {
+      alert(err?.response?.data?.message || "Xarajatni bekor qilishda xatolik yuz berdi.");
+    }
+  });
+
+  const handleDelete = (id: string, title: string) => {
+    if (confirm(`"${title}" xarajatini haqiqatan ham bekor qilmoqchimisiz?`)) {
+      deleteMutation.mutate(id);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,6 +87,7 @@ export default function ExpensesPage() {
                   <th>Summa</th>
                   <th>Mas&apos;ul</th>
                   <th>Tavsif</th>
+                  <th className="text-right">Amallar</th>
                 </tr>
               </thead>
               <tbody>
@@ -81,11 +98,23 @@ export default function ExpensesPage() {
                     <td className="font-bold text-red-600">{formatCurrency(e.amount)}</td>
                     <td>{e.created_by_name}</td>
                     <td className="text-gray-500 text-xs max-w-xs truncate">{e.description || '-'}</td>
+                    <td>
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => handleDelete(e.id, e.title)}
+                          disabled={deleteMutation.isPending}
+                          className="p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded text-red-400 hover:text-red-600 cursor-pointer"
+                          title="Bekor qilish"
+                        >
+                          <XCircle size={18} />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
                 {expenses.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="text-center text-gray-400 py-12">
+                    <td colSpan={6} className="text-center text-gray-400 py-12">
                       Xarajatlar kiritilmagan
                     </td>
                   </tr>

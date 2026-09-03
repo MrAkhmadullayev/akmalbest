@@ -13,4 +13,7 @@ export const expensesService = {
 
   createCategory: (data: { name: string }) =>
     apiClient.post<ExpenseCategory>('/expense-categories/', data),
+
+  delete: (id: string) =>
+    apiClient.delete(`/expenses/${id}/`),
 };
