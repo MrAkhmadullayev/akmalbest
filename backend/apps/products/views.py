@@ -79,6 +79,7 @@ class ProductViewSet(viewsets.ModelViewSet):
             return [HasModulePermission()]
         if self.action == "destroy":
             from apps.accounts.permissions import IsAdmin
+
             return [HasModulePermission(), IsAdmin()]
         return [HasModulePermission(), IsAdminOrWarehouseManager()]
 
