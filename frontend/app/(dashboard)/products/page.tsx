@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { productsService, categoriesService } from '@/services/products';
 import { formatCurrency, getStockStatus } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
 import { Search, Plus, Edit, Trash2, Eye } from 'lucide-react';
 import Link from 'next/link';
 
@@ -13,6 +14,8 @@ export default function ProductsPage() {
   const [category, setCategory] = useState('');
   const [page, setPage] = useState(1);
   const [showInactive, setShowInactive] = useState(false);
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN';
 
   const [stockModal, setStockModal] = useState<{ isOpen: boolean; product: any }>({ isOpen: false, product: null });
   const [stockData, setStockData] = useState({ quantity: 0, purchase_price: 0, payment_method: 'CASH', notes: '' });
@@ -226,12 +229,14 @@ export default function ProductsPage() {
                           >
                             <Edit size={18} />
                           </Link>
-                          <button
-                            onClick={() => handleDelete(p.id)}
-                            className="p-1 text-red-400 hover:text-red-600 cursor-pointer"
-                          >
-                            <Trash2 size={18} />
-                          </button>
+                          {isAdmin && (
+                            <button
+                              onClick={() => handleDelete(p.id)}
+                              className="p-1 text-red-400 hover:text-red-600 cursor-pointer"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

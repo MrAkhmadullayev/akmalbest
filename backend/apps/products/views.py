@@ -77,6 +77,9 @@ class ProductViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ("list", "retrieve", "metadata"):
             return [HasModulePermission()]
+        if self.action == "destroy":
+            from apps.accounts.permissions import IsAdmin
+            return [HasModulePermission(), IsAdmin()]
         return [HasModulePermission(), IsAdminOrWarehouseManager()]
 
     def perform_create(self, serializer):
