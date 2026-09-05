@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { expensesService } from '@/services/expenses';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
 import { Plus, Search, DollarSign, XCircle } from 'lucide-react';
 
 export default function ExpensesPage() {
@@ -13,6 +14,8 @@ export default function ExpensesPage() {
   const [expenseDate, setExpenseDate] = useState(new Date().toISOString().split('T')[0]);
   const [description, setDescription] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN';
 
   const { data: expensesData, isLoading } = useQuery({
     queryKey: ['expenses'],
@@ -28,6 +31,9 @@ export default function ExpensesPage() {
       setDescription('');
       setShowAddForm(false);
     },
+    onError: (err: any) => {
+      alert(err?.response?.data?.message || err?.response?.data?.detail || "Xarajatni saqlashda xatolik yuz berdi.");
+    }
   });
 
   const deleteMutation = useMutation({
@@ -100,14 +106,16 @@ export default function ExpensesPage() {
                     <td className="text-gray-500 text-xs max-w-xs truncate">{e.description || '-'}</td>
                     <td>
                       <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => handleDelete(e.id, e.title)}
-                          disabled={deleteMutation.isPending}
-                          className="p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded text-red-400 hover:text-red-600 cursor-pointer"
-                          title="Bekor qilish"
-                        >
-                          <XCircle size={18} />
-                        </button>
+                        {isAdmin && (
+                          <button
+                            onClick={() => handleDelete(e.id, e.title)}
+                            disabled={deleteMutation.isPending}
+                            className="p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded text-red-400 hover:text-red-600 cursor-pointer"
+                            title="Bekor qilish"
+                          >
+                            <XCircle size={18} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

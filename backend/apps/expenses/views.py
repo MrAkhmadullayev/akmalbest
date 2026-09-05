@@ -14,14 +14,28 @@ class ExpenseCategoryViewSet(viewsets.ModelViewSet):
     queryset = ExpenseCategory.objects.all()
     serializer_class = ExpenseCategorySerializer
     required_module = "expenses"
-    permission_classes = [HasModulePermission, IsAdmin]
+
+    def get_permissions(self):
+        if self.action in ("list", "retrieve", "metadata", "create", "update", "partial_update"):
+            return [HasModulePermission()]
+        if self.action == "destroy":
+            return [HasModulePermission(), IsAdmin()]
+        return [HasModulePermission()]
+
     search_fields = ["name"]
 
 
 class ExpenseViewSet(viewsets.ModelViewSet):
     serializer_class = ExpenseSerializer
     required_module = "expenses"
-    permission_classes = [HasModulePermission, IsAdmin]
+
+    def get_permissions(self):
+        if self.action in ("list", "retrieve", "metadata", "create", "update", "partial_update"):
+            return [HasModulePermission()]
+        if self.action == "destroy":
+            return [HasModulePermission(), IsAdmin()]
+        return [HasModulePermission()]
+
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ["category", "expense_date"]
     search_fields = ["title", "description"]
