@@ -12,7 +12,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from .models import User
-from .permissions import IsSuperAdmin
+from .permissions import IsAdmin
 from .serializers import (
     ChangePasswordSerializer,
     CustomTokenObtainPairSerializer,
@@ -63,10 +63,10 @@ class MeView(generics.RetrieveAPIView):
 
 
 class UserViewSet(viewsets.ModelViewSet):
-    """User CRUD management - Super Admin only."""
+    """User CRUD management - Super Admin and Admin."""
 
     queryset = User.objects.all()
-    permission_classes = [IsSuperAdmin]
+    permission_classes = [IsAdmin]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ["role", "is_active"]
     search_fields = ["username", "first_name", "last_name", "phone", "email"]

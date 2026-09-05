@@ -20,6 +20,7 @@ export const MODULE_LABELS: { key: ModuleKey; label: string }[] = [
   { key: 'inventory', label: 'Ombor' },
   { key: 'suppliers', label: 'Yetkazib beruvchilar' },
   { key: 'notifications', label: 'Bildirishnomalar' },
+  { key: 'users', label: 'Foydalanuvchilar' },
   { key: 'settings', label: 'Sozlamalar' },
 ];
 
@@ -31,7 +32,7 @@ export const MODULE_LABELS: { key: ModuleKey; label: string }[] = [
 export const DEFAULT_ROLE_MODULES: Record<string, ModuleKey[]> = {
   ADMIN: [
     'dashboard', 'pos', 'products', 'categories', 'customers',
-    'debts', 'expenses', 'reports', 'inventory', 'suppliers', 'notifications',
+    'debts', 'expenses', 'reports', 'inventory', 'suppliers', 'notifications', 'users',
   ],
   CASHIER: [
     'dashboard', 'pos', 'products', 'categories', 'customers',

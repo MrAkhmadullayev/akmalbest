@@ -50,6 +50,7 @@ DEFAULT_ROLE_PERMISSIONS = {
         "inventory",
         "suppliers",
         "notifications",
+        "users",
     ),
     UserRole.CASHIER: (
         "dashboard",
