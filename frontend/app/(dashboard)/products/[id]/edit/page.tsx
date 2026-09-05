@@ -209,10 +209,11 @@ export default function EditProductPage() {
             <input
               {...register('current_stock', { valueAsNumber: true })}
               type="number"
-              className="input font-semibold text-indigo-700"
+              className="input font-semibold text-indigo-700 bg-gray-50 cursor-not-allowed"
               min={0}
+              disabled
             />
-            <p className="text-xs text-gray-400 mt-1">Ombordagi hozirgi miqdor</p>
+            <p className="text-xs text-gray-400 mt-1">Ombordagi hozirgi miqdor (Tahrirlash ta'qiqlanadi)</p>
           </div>
 
           <div>

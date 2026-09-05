@@ -141,7 +141,7 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             "brand": {"required": False, "allow_null": True},
             "supplier": {"required": False, "allow_null": True},
-            "current_stock": {"required": False},
+            "current_stock": {"read_only": True},
         }
 
     def validate_barcode(self, value):
