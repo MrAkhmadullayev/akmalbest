@@ -21,3 +21,7 @@ class ProductAdmin(admin.ModelAdmin):
     list_filter = ["category", "brand", "is_active"]
     search_fields = ["name", "barcode"]
     ordering = ["name"]
+    # current_stock — Inventory.quantity keshi. Admin panel orqali qo'lda
+    # o'zgartirilsa ombor hisobi buziladi, shuning uchun faqat o'qish uchun.
+    # Qoldiqni o'zgartirish: Ombor → Tuzatish yoki mahsulotga kirim qo'shish.
+    readonly_fields = ["current_stock"]

@@ -28,6 +28,10 @@ class Notification(models.Model):
     title = models.CharField(max_length=255)
     message = models.TextField()
     type = models.CharField(max_length=20, choices=NotificationType.choices, db_index=True)
+    # Takrorlanishni to'sish kaliti, masalan "LOW_STOCK:<product_id>".
+    # O'qilmagan bir xil kalitli bildirishnoma bo'lsa, yangisi yaratilmaydi —
+    # aks holda har savdoda yangi qator qo'shilib, jadval cheksiz o'sardi.
+    reference_key = models.CharField(max_length=100, blank=True, db_index=True)
     is_read = models.BooleanField(default=False, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 

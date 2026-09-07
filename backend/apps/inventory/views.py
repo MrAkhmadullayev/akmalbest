@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from apps.accounts.permissions import HasModulePermission, IsAdminOrWarehouseManager
 from apps.products.models import Product
 
+from .exceptions import InventoryError
 from .models import Inventory, InventoryTransaction
 from .serializers import InventoryAdjustSerializer, InventorySerializer, InventoryTransactionSerializer
 from .services import InventoryService
@@ -28,17 +29,21 @@ class InventoryViewSet(viewsets.ReadOnlyModelViewSet):
     ordering = ["product__name"]
 
     def get_queryset(self):
+        # Filtr ham, ko'rsatiladigan miqdor ham bitta manbadan — Inventory.quantity.
+        # Ilgari filtr `product__current_stock` bo'yicha edi, ro'yxatda esa
+        # `Inventory.quantity` ko'rsatilardi; ikkisi og'ganda filtr noto'g'ri
+        # mahsulotlarni chiqarardi.
         qs = Inventory.objects.select_related("product").all()
         stock_status = self.request.query_params.get("stock_status")
         if stock_status == "LOW":
-            qs = qs.filter(product__current_stock__lte=models.F("product__min_stock"), product__current_stock__gt=0)
+            qs = qs.filter(quantity__lte=models.F("product__min_stock"), quantity__gt=0)
         elif stock_status == "WARNING":
             qs = qs.filter(
-                product__current_stock__lte=models.F("product__warning_stock"),
-                product__current_stock__gt=models.F("product__min_stock"),
+                quantity__lte=models.F("product__warning_stock"),
+                quantity__gt=models.F("product__min_stock"),
             )
         elif stock_status == "OUT_OF_STOCK":
-            qs = qs.filter(product__current_stock__lte=0)
+            qs = qs.filter(quantity__lte=0)
         return qs
 
 
@@ -60,12 +65,17 @@ class InventoryAdjustView(generics.CreateAPIView):
                 {"success": False, "message": "Mahsulot topilmadi.", "errors": {}}, status=status.HTTP_404_NOT_FOUND
             )
 
-        new_qty = InventoryService.adjust_stock(
-            product=product,
-            new_quantity=serializer.validated_data["new_quantity"],
-            user=request.user,
-            notes=serializer.validated_data.get("notes", ""),
-        )
+        try:
+            new_qty = InventoryService.adjust_stock(
+                product=product,
+                new_quantity=serializer.validated_data["new_quantity"],
+                user=request.user,
+                notes=serializer.validated_data.get("notes", ""),
+            )
+        except InventoryError as e:
+            return Response(
+                {"success": False, "message": str(e), "errors": {}}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         return Response(
             {

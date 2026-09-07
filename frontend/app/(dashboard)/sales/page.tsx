@@ -37,8 +37,12 @@ export default function SalesPage() {
   };
 
   const sales = data?.data?.results || [];
+  // Summary backend'da hisoblanadi: bekor qilinganlar chiqarilib,
+  // qaytarilgan qism ayirilgan SOF qiymat.
   const summary = (data?.data as any)?.summary || {
     total_sales: '0',
+    gross_sales: '0',
+    returned_total: '0',
     cash_sales: '0',
     card_sales: '0',
     debt_sales: '0',
@@ -83,10 +87,15 @@ export default function SalesPage() {
       </div>
 
       {!isLoading && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div className="card p-4 bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-800/30">
-            <p className="text-sm text-indigo-600 dark:text-indigo-400 font-medium mb-1">Umumiy savdo</p>
+            <p className="text-sm text-indigo-600 dark:text-indigo-400 font-medium mb-1">Sof savdo</p>
             <p className="text-xl font-bold text-gray-900 dark:text-white">{formatCurrency(summary.total_sales)}</p>
+            <p className="text-xs text-indigo-500/70 mt-1">bekor qilingan va qaytarilganlarsiz</p>
+          </div>
+          <div className="card p-4 bg-rose-50 dark:bg-rose-900/20 border-rose-100 dark:border-rose-800/30">
+            <p className="text-sm text-rose-600 dark:text-rose-400 font-medium mb-1">Qaytarilgan</p>
+            <p className="text-xl font-bold text-gray-900 dark:text-white">{formatCurrency(summary.returned_total)}</p>
           </div>
           <div className="card p-4 bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800/30">
             <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium mb-1">Naqd</p>
@@ -129,7 +138,14 @@ export default function SalesPage() {
                   <td>{formatDate(sale.created_at)}</td>
                   <td>{sale.cashier_name}</td>
                   <td>{sale.customer_name || '-'}</td>
-                  <td className="font-bold">{formatCurrency(sale.total)}</td>
+                  <td className="font-bold">
+                    {formatCurrency(sale.net_total ?? sale.total)}
+                    {Number(sale.returned_total ?? 0) > 0 && (
+                      <span className="block text-xs font-normal text-orange-600">
+                        asl: {formatCurrency(sale.total)}
+                      </span>
+                    )}
+                  </td>
                   <td>
                     <span className="badge bg-gray-100 text-gray-800">
                       {getPaymentMethodLabel(sale.payment_method)}

@@ -83,7 +83,9 @@ class Product(models.Model):
     min_stock = models.PositiveIntegerField(default=5, help_text="Minimal zaxira")
     warning_stock = models.PositiveIntegerField(default=10, help_text="Ogohlantirish darajasi")
     max_stock = models.PositiveIntegerField(default=100, help_text="Maksimal zaxira")
-    current_stock = models.IntegerField(default=0, help_text="Joriy zaxira (denormalized)")
+    # Inventory.quantity keshi. FAQAT InventoryService orqali yoziladi —
+    # serializer/view/admin hech qachon to'g'ridan-to'g'ri o'zgartirmasligi kerak.
+    current_stock = models.IntegerField(default=0, help_text="Joriy zaxira (Inventory.quantity keshi)")
     supplier = models.ForeignKey(
         "suppliers.Supplier", on_delete=models.SET_NULL, related_name="products", null=True, blank=True
     )
@@ -111,6 +113,8 @@ class Product(models.Model):
                 condition=models.Q(purchase_price__gte=0), name="chk_product_purchase_price_positive"
             ),
             models.CheckConstraint(condition=models.Q(selling_price__gte=0), name="chk_product_selling_price_positive"),
+            # current_stock — Inventory.quantity keshi; u ham manfiy bo'lmasligi kerak.
+            models.CheckConstraint(condition=models.Q(current_stock__gte=0), name="chk_product_stock_non_negative"),
         ]
 
     def __str__(self):

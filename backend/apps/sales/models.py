@@ -38,6 +38,14 @@ class Sale(models.Model):
     profit = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
     total_cogs_cash = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
     total_cogs_debt = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
+    # Qaytarilgan/bekor qilingan qism. Asl hujjat (subtotal/total/profit)
+    # o'zgarmaydi — buxgalteriya hujjati o'zgartirilmasligi kerak — buning
+    # o'rniga qaytarilgan qism alohida yig'iladi va sof qiymat shundan chiqadi.
+    returned_total = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
+    returned_profit = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
+    returned_cogs_cash = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
+    returned_cogs_debt = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
+
     payment_method = models.CharField(max_length=10, choices=PaymentMethod.choices)
     status = models.CharField(max_length=20, choices=SaleStatus.choices, default=SaleStatus.COMPLETED, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
@@ -51,6 +59,16 @@ class Sale(models.Model):
 
     def __str__(self):
         return f"Savdo #{self.sale_number}"
+
+    @property
+    def net_total(self):
+        """Sof tushum: asl summadan qaytarilgani ayirilgan."""
+        return self.total - self.returned_total
+
+    @property
+    def net_profit(self):
+        """Sof foyda: asl foydadan qaytarilgani ayirilgan."""
+        return self.profit - self.returned_profit
 
 
 class SaleItem(models.Model):
@@ -72,13 +90,29 @@ class SaleItem(models.Model):
     cogs_debt = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
     profit = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
 
+    # Qaytarilgan qismning pul ko'rinishi (proporsional taqsimlanadi).
+    returned_subtotal = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
+    returned_cogs_cash = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
+    returned_cogs_debt = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
+    returned_profit = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
+
     class Meta:
         db_table = "sale_items"
         verbose_name = "Savdo elementi"
         verbose_name_plural = "Savdo elementlari"
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(returned_quantity__lte=models.F("quantity")),
+                name="chk_saleitem_returned_lte_quantity",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.product_name_snapshot} x{self.quantity}"
+
+    @property
+    def returnable_quantity(self):
+        return self.quantity - self.returned_quantity
 
 
 class Payment(models.Model):
@@ -88,10 +122,13 @@ class Payment(models.Model):
     sale = models.ForeignKey(Sale, on_delete=models.CASCADE, related_name="payments")
     amount = models.DecimalField(max_digits=14, decimal_places=2, validators=[MinValueValidator(Decimal("0"))])
     payment_method = models.CharField(max_length=10, choices=PaymentMethod.choices)
+    # Qaytarim (kassadan chiqqan pul). `amount` musbat qoladi, yo'nalish shu
+    # bayroq bilan belgilanadi — shunda kassa hisobi to'g'ri yig'iladi.
+    is_refund = models.BooleanField(default=False, db_index=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="payments"
     )
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     class Meta:
         db_table = "payments"
@@ -100,4 +137,9 @@ class Payment(models.Model):
         verbose_name_plural = "To'lovlar"
 
     def __str__(self):
-        return f"{self.amount} UZS - {self.payment_method}"
+        prefix = "Qaytarim" if self.is_refund else "To'lov"
+        return f"{prefix}: {self.amount} UZS - {self.payment_method}"
+
+    @property
+    def signed_amount(self):
+        return -self.amount if self.is_refund else self.amount

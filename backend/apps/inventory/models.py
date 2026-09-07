@@ -22,9 +22,25 @@ class Inventory(models.Model):
         db_table = "inventory"
         verbose_name = "Ombor"
         verbose_name_plural = "Ombor"
+        constraints = [
+            # Manfiy qoldiq — hisobning buzilgani. DB darajasida to'samiz.
+            models.CheckConstraint(condition=models.Q(quantity__gte=0), name="chk_inventory_quantity_non_negative"),
+        ]
 
     def __str__(self):
         return f"{self.product.name}: {self.quantity}"
+
+    @property
+    def stock_status(self):
+        """Stock status derived from THIS row's quantity (yagona manba)."""
+        product = self.product
+        if self.quantity <= 0:
+            return "OUT_OF_STOCK"
+        elif self.quantity <= product.min_stock:
+            return "LOW"
+        elif self.quantity <= product.warning_stock:
+            return "WARNING"
+        return "SUFFICIENT"
 
 
 class BatchPaymentMethod(models.TextChoices):

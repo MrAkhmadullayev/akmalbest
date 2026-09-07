@@ -7,20 +7,55 @@ class NotificationService:
     """Creates notifications for stock levels and debt reminders."""
 
     @staticmethod
+    def _emit(title, message, notification_type, reference_key):
+        """Create a notification unless an identical unread one already exists.
+
+        Ilgari har bir savdoda yangi qator yaratilardi va kam qoldiqli mahsulot
+        bir necha marta sotilsa, bildirishnomalar jadvali cheksiz o'sardi.
+        """
+        if reference_key and Notification.objects.filter(
+            reference_key=reference_key, is_read=False
+        ).exists():
+            return None
+
+        return Notification.objects.create(
+            title=title,
+            message=message,
+            type=notification_type,
+            reference_key=reference_key,
+        )
+
+    @staticmethod
     def check_stock_level(product):
-        """Generate stock notifications based on product thresholds."""
+        """Generate stock notifications based on product thresholds.
+
+        Qoldiq yetarli bo'lib qolsa, eski ogohlantirishlar o'qilgan deb
+        belgilanadi — panelda "tugagan" deb turgan mahsulot omborga kirim
+        qilingandan keyin ham osilib qolmasin.
+        """
+        stock_keys = [f"LOW_STOCK:{product.id}", f"OUT_OF_STOCK:{product.id}"]
+
         if product.current_stock <= 0:
-            Notification.objects.create(
+            Notification.objects.filter(reference_key=f"LOW_STOCK:{product.id}", is_read=False).update(is_read=True)
+            NotificationService._emit(
                 title="🔴 Mahsulot tugadi",
                 message=f"{product.name} mahsuloti tugadi.",
-                type=NotificationType.OUT_OF_STOCK,
+                notification_type=NotificationType.OUT_OF_STOCK,
+                reference_key=f"OUT_OF_STOCK:{product.id}",
             )
         elif product.current_stock <= product.min_stock:
-            Notification.objects.create(
+            Notification.objects.filter(
+                reference_key=f"OUT_OF_STOCK:{product.id}", is_read=False
+            ).update(is_read=True)
+            NotificationService._emit(
                 title="⚠ Mahsulot kam qoldi",
                 message=f"{product.name} mahsuloti kam qoldi. Qoldiq: {product.current_stock} dona.",
-                type=NotificationType.LOW_STOCK,
+                notification_type=NotificationType.LOW_STOCK,
+                reference_key=f"LOW_STOCK:{product.id}",
             )
+        else:
+            # Qoldiq tiklandi — ochiq ogohlantirishlarni yopamiz.
+            Notification.objects.filter(reference_key__in=stock_keys, is_read=False).update(is_read=True)
 
     @staticmethod
     def create_debt_notification(debt, notification_type):
@@ -44,8 +79,9 @@ class NotificationService:
             notification_type, ("Qarz haqida xabar", f"{debt.customer.full_name} - {debt.remaining_amount} UZS")
         )
 
-        Notification.objects.create(
+        return NotificationService._emit(
             title=title,
             message=message,
-            type=notification_type,
+            notification_type=notification_type,
+            reference_key=f"{notification_type}:{debt.id}",
         )

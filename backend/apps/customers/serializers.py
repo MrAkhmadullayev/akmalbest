@@ -33,7 +33,8 @@ class CustomerSerializer(serializers.ModelSerializer):
         return str(result["total"] or 0)
 
     def get_total_purchases(self, obj):
-        return obj.sales.count() if hasattr(obj, "sales") else 0
+        # Bekor qilingan savdolar xarid sifatida sanalmaydi.
+        return obj.sales.exclude(status="CANCELLED").count() if hasattr(obj, "sales") else 0
 
 
 class CustomerDetailSerializer(CustomerSerializer):

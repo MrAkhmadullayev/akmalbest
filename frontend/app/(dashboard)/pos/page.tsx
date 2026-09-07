@@ -338,7 +338,10 @@ export default function POSPage() {
                       <td>
                         <div className="flex items-center justify-center gap-1">
                           <button
-                            onClick={() => cart.updateQuantity(item.product_id, item.quantity - 1)}
+                            onClick={() => {
+                              const result = cart.updateQuantity(item.product_id, item.quantity - 1);
+                              if (!result.success && result.error) setErrorMsg(result.error);
+                            }}
                             className="w-7 h-7 rounded bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center cursor-pointer"
                           >
                             <Minus size={14} />
@@ -346,14 +349,24 @@ export default function POSPage() {
                           <input
                             type="number"
                             value={item.quantity}
-                            onChange={(e) => cart.updateQuantity(item.product_id, parseInt(e.target.value) || 1)}
+                            onChange={(e) => {
+                              const result = cart.updateQuantity(
+                                item.product_id,
+                                parseInt(e.target.value) || 1
+                              );
+                              if (!result.success && result.error) setErrorMsg(result.error);
+                              else setErrorMsg('');
+                            }}
                             className="w-14 text-center border dark:border-gray-700 bg-transparent rounded py-1 text-sm"
                             min={1}
                             max={item.stock}
                           />
                           <button
-                            onClick={() => cart.updateQuantity(item.product_id, item.quantity + 1)}
-                            className="w-7 h-7 rounded bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center cursor-pointer"
+                            onClick={() => {
+                              const result = cart.updateQuantity(item.product_id, item.quantity + 1);
+                              if (!result.success && result.error) setErrorMsg(result.error);
+                            }}
+                            className="w-7 h-7 rounded bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                             disabled={item.quantity >= item.stock}
                           >
                             <Plus size={14} />

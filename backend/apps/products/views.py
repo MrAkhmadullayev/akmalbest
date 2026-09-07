@@ -2,6 +2,9 @@
 Product views and viewsets.
 """
 
+from decimal import Decimal, InvalidOperation
+
+from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics, status, viewsets
 from rest_framework.decorators import action
@@ -10,6 +13,9 @@ from rest_framework.response import Response
 
 from apps.accounts.permissions import HasModulePermission, IsAdminOrWarehouseManager
 from apps.audit.services import AuditService
+from apps.inventory.exceptions import InventoryError
+from apps.inventory.models import Inventory, TransactionType
+from apps.inventory.services import InventoryService
 
 from .models import Brand, Category, Product
 from .serializers import (
@@ -83,21 +89,18 @@ class ProductViewSet(viewsets.ModelViewSet):
             return [HasModulePermission(), IsAdmin()]
         return [HasModulePermission(), IsAdminOrWarehouseManager()]
 
+    @transaction.atomic
     def perform_create(self, serializer):
         initial_stock = serializer.validated_data.pop("initial_stock", 0)
         payment_method = serializer.validated_data.pop("payment_method", "CASH")
         product = serializer.save()
 
-        # Create inventory record for new product
-        from apps.inventory.models import Inventory
-
+        # Har bir mahsulotning ombor yozuvi bo'lishi SHART — aks holda savdo
+        # paytida qulflash uchun qator topilmay xato berardi.
         Inventory.objects.get_or_create(product=product, defaults={"quantity": 0})
 
-        # Add initial stock as a batch
+        # Boshlang'ich qoldiq partiya sifatida kiritiladi
         if initial_stock > 0:
-            from apps.inventory.models import TransactionType
-            from apps.inventory.services import InventoryService
-
             InventoryService.increase_stock(
                 product=product,
                 quantity=initial_stock,
@@ -109,6 +112,7 @@ class ProductViewSet(viewsets.ModelViewSet):
                 purchase_price=product.purchase_price,
                 payment_method=payment_method,
             )
+            product.refresh_from_db()
 
         # Audit log
         AuditService.log(
@@ -121,6 +125,10 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         old_data = ProductDetailSerializer(self.get_object()).data
+        # Bu ikkisi faqat yaratishda ishlatiladi. Tahrirlashda kelib qolsa,
+        # e'tiborsiz qoldiramiz — qoldiq faqat kirim/tuzatish orqali o'zgaradi.
+        serializer.validated_data.pop("initial_stock", None)
+        serializer.validated_data.pop("payment_method", None)
         product = serializer.save()
         AuditService.log(
             user=self.request.user,
@@ -149,6 +157,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         methods=["post"],
         permission_classes=[HasModulePermission, IsAdminOrWarehouseManager],
     )
+    @transaction.atomic
     def add_stock(self, request, pk=None):
         product = self.get_object()
         quantity = request.data.get("quantity", 0)
@@ -158,23 +167,28 @@ class ProductViewSet(viewsets.ModelViewSet):
 
         try:
             quantity = int(quantity)
-            if quantity <= 0:
-                raise ValueError
-        except ValueError:
+        except (TypeError, ValueError):
             return Response({"success": False, "message": "Noto'g'ri miqdor."}, status=status.HTTP_400_BAD_REQUEST)
+        if quantity <= 0:
+            return Response({"success": False, "message": "Noto'g'ri miqdor."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if payment_method not in ("CASH", "DEBT"):
+            return Response(
+                {"success": False, "message": "To'lov turi noto'g'ri."}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         if purchase_price is None:
             purchase_price = product.purchase_price
         else:
             try:
-                from decimal import Decimal
-
                 purchase_price = Decimal(str(purchase_price))
-            except Exception:
+            except (InvalidOperation, TypeError, ValueError):
                 return Response({"success": False, "message": "Noto'g'ri narx."}, status=status.HTTP_400_BAD_REQUEST)
-
-        from apps.inventory.models import TransactionType
-        from apps.inventory.services import InventoryService
+            if purchase_price < 0:
+                return Response(
+                    {"success": False, "message": "Narx manfiy bo'lishi mumkin emas."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
         try:
             InventoryService.increase_stock(
@@ -188,14 +202,14 @@ class ProductViewSet(viewsets.ModelViewSet):
                 purchase_price=purchase_price,
                 payment_method=payment_method,
             )
-
-            # Update product purchase price if it changed
-            if product.purchase_price != purchase_price:
-                product.purchase_price = purchase_price
-                product.save(update_fields=["purchase_price", "updated_at"])
-
-        except Exception as e:
+        except InventoryError as e:
             return Response({"success": False, "message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Yangi tannarxni saqlaymiz. update_fields SHART — aks holda ushbu
+        # obyektdagi eskirgan current_stock qiymati omborni qayta yozib yuborardi.
+        if product.purchase_price != purchase_price:
+            product.purchase_price = purchase_price
+            product.save(update_fields=["purchase_price", "updated_at"])
 
         return Response({"success": True, "message": "Kirim muvaffaqiyatli qo'shildi."})
 
@@ -218,19 +232,10 @@ class ProductBarcodeLookupView(generics.RetrieveAPIView):
         try:
             instance = self.get_object()
 
-            # Always sync current_stock from Inventory (authoritative source)
-            from apps.inventory.models import Inventory
-
-            try:
-                inv = Inventory.objects.get(product=instance)
-                if instance.current_stock != inv.quantity:
-                    # Fix out-of-sync denormalized field silently
-                    Product.objects.filter(pk=instance.pk).update(current_stock=inv.quantity)
-                    instance.current_stock = inv.quantity
-            except Inventory.DoesNotExist:
-                # No inventory record — create one with 0
-                Inventory.objects.create(product=instance, quantity=0)
-                instance.current_stock = 0
+            # Qoldiqni avtoritar manbadan (Inventory) o'qiymiz va kesh og'gan
+            # bo'lsa jimgina to'g'rilaymiz. Kassir shtrix-kod o'qitganda har
+            # doim haqiqiy qoldiqni ko'rishi kerak.
+            InventoryService.peek(instance)
 
             serializer = self.get_serializer(instance)
             return Response(

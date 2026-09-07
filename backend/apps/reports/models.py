@@ -27,6 +27,24 @@ class ShiftReport(models.Model):
     total_profit = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
     total_expenses = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
 
+    # Kassa hisobi to'g'ri chiqishi uchun zarur qismlar. Ilgari faqat savdo
+    # naqdi yozilardi; nasiya to'lovlari va qaytarimlar hisobga olinmasdi.
+    total_returns = models.DecimalField(
+        max_digits=14, decimal_places=2, default=Decimal("0"), help_text="Smenada qaytarilgan summa"
+    )
+    total_debt_payments_cash = models.DecimalField(
+        max_digits=14, decimal_places=2, default=Decimal("0"), help_text="Nasiya bo'yicha naqd tushum"
+    )
+    total_debt_payments_card = models.DecimalField(
+        max_digits=14, decimal_places=2, default=Decimal("0"), help_text="Nasiya bo'yicha karta tushumi"
+    )
+    expected_cash = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=Decimal("0"),
+        help_text="Smena oxirida kassada bo'lishi kerak bo'lgan naqd",
+    )
+
     sales_count = models.PositiveIntegerField(default=0)
 
     class Meta:

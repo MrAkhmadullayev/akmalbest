@@ -76,8 +76,35 @@ export function useCart() {
     setItems((prev) => prev.filter((item) => item.product_id !== productId));
   }, []);
 
-  const updateQuantity = useCallback((productId: string, quantity: number) => {
-    if (quantity < 1) return;
+  /**
+   * Miqdorni o'zgartiradi.
+   *
+   * Muhim: miqdor ombor qoldig'idan oshib ketmasligi shu yerda ham
+   * cheklanadi. `<input max=...>` HTML atributi qo'lda yozilgan qiymatni
+   * to'smaydi — kassir 999 deb yozib yuborishi mumkin edi.
+   */
+  const updateQuantity = useCallback((productId: string, quantity: number): CartActionResult => {
+    if (!Number.isFinite(quantity) || quantity < 1) {
+      return { success: false, error: 'Miqdor 1 dan kam bo\'lishi mumkin emas' };
+    }
+
+    const target = items.find((item) => item.product_id === productId);
+    if (!target) return { success: false, error: 'Mahsulot savatda topilmadi' };
+
+    if (quantity > target.stock) {
+      setItems((prev) =>
+        prev.map((item) =>
+          item.product_id === productId
+            ? { ...item, quantity: item.stock, subtotal: item.stock * item.price - item.discount }
+            : item
+        )
+      );
+      return {
+        success: false,
+        error: `"${target.name}" — omborda faqat ${target.stock} dona bor`,
+      };
+    }
+
     setItems((prev) =>
       prev.map((item) =>
         item.product_id === productId
@@ -89,19 +116,23 @@ export function useCart() {
           : item
       )
     );
-  }, []);
+    return { success: true };
+  }, [items]);
 
+  /** Qator chegirmasi. Backend manfiy summani rad etadi, shuning uchun bu
+   *  yerda ham qator summasidan oshib ketmasligi cheklanadi. */
   const updateItemDiscount = useCallback((productId: string, discountAmount: number) => {
     setItems((prev) =>
-      prev.map((item) =>
-        item.product_id === productId
-          ? {
-              ...item,
-              discount: discountAmount,
-              subtotal: item.quantity * item.price - discountAmount,
-            }
-          : item
-      )
+      prev.map((item) => {
+        if (item.product_id !== productId) return item;
+        const lineGross = item.quantity * item.price;
+        const safeDiscount = Math.min(Math.max(discountAmount || 0, 0), lineGross);
+        return {
+          ...item,
+          discount: safeDiscount,
+          subtotal: lineGross - safeDiscount,
+        };
+      })
     );
   }, []);
 

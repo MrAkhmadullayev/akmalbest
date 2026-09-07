@@ -6,6 +6,8 @@ from .models import Payment, Sale, SaleItem
 
 
 class SaleItemSerializer(serializers.ModelSerializer):
+    returnable_quantity = serializers.ReadOnlyField()
+
     class Meta:
         model = SaleItem
         fields = [
@@ -17,6 +19,8 @@ class SaleItemSerializer(serializers.ModelSerializer):
             "selling_price_snapshot",
             "quantity",
             "returned_quantity",
+            "returnable_quantity",
+            "returned_subtotal",
             "discount",
             "subtotal",
             "profit",
@@ -29,7 +33,16 @@ class PaymentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Payment
-        fields = ["id", "sale", "amount", "payment_method", "created_by", "created_by_name", "created_at"]
+        fields = [
+            "id",
+            "sale",
+            "amount",
+            "payment_method",
+            "is_refund",
+            "created_by",
+            "created_by_name",
+            "created_at",
+        ]
         read_only_fields = fields
 
 
@@ -37,6 +50,9 @@ class SaleListSerializer(serializers.ModelSerializer):
     cashier_name = serializers.CharField(source="cashier.full_name", read_only=True)
     customer_name = serializers.CharField(source="customer.full_name", read_only=True, default="")
     items_count = serializers.SerializerMethodField()
+    # Sof qiymatlar — qaytarilgan qism ayirilgan holda.
+    net_total = serializers.ReadOnlyField()
+    net_profit = serializers.ReadOnlyField()
 
     class Meta:
         model = Sale
@@ -51,6 +67,10 @@ class SaleListSerializer(serializers.ModelSerializer):
             "discount",
             "total",
             "profit",
+            "returned_total",
+            "returned_profit",
+            "net_total",
+            "net_profit",
             "payment_method",
             "status",
             "items_count",
@@ -67,6 +87,8 @@ class SaleDetailSerializer(serializers.ModelSerializer):
     cashier_name = serializers.CharField(source="cashier.full_name", read_only=True)
     customer_name = serializers.CharField(source="customer.full_name", read_only=True, default="")
     customer_phone = serializers.CharField(source="customer.phone", read_only=True, default="")
+    net_total = serializers.ReadOnlyField()
+    net_profit = serializers.ReadOnlyField()
 
     class Meta:
         model = Sale
@@ -82,6 +104,10 @@ class SaleDetailSerializer(serializers.ModelSerializer):
             "discount",
             "total",
             "profit",
+            "returned_total",
+            "returned_profit",
+            "net_total",
+            "net_profit",
             "payment_method",
             "status",
             "items",

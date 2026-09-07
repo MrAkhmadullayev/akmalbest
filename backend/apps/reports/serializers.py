@@ -23,6 +23,10 @@ class ShiftReportSerializer(serializers.ModelSerializer):
             "total_debt",
             "total_profit",
             "total_expenses",
+            "total_returns",
+            "total_debt_payments_cash",
+            "total_debt_payments_card",
+            "expected_cash",
             "sales_count",
         ]
         read_only_fields = fields

@@ -7,7 +7,8 @@ from django.core.management.base import BaseCommand
 from apps.accounts.models import User, UserRole
 from apps.customers.models import Customer
 from apps.expenses.models import ExpenseCategory
-from apps.inventory.models import Inventory
+from apps.inventory.models import Inventory, TransactionType
+from apps.inventory.services import InventoryService
 from apps.products.models import Brand, Category, Product
 from apps.suppliers.models import Supplier
 
@@ -325,13 +326,26 @@ class Command(BaseCommand):
                     unit="bottle",
                     purchase_price=Decimal(pd["purchase_price"]),
                     selling_price=Decimal(pd["selling_price"]),
-                    current_stock=pd["stock"],
+                    # Qoldiq to'g'ridan-to'g'ri yozilmaydi — InventoryService
+                    # orqali kiritiladi, aks holda partiya (tannarx) qatlami
+                    # bo'sh qolib, tannarx hisobi buzilardi.
+                    current_stock=0,
                     supplier=suppliers[0] if pd["category"] in ("Vodka", "Viski", "Konyak", "Rom") else suppliers[2],
                     min_stock=5,
                     warning_stock=10,
                     max_stock=100,
                 )
-                Inventory.objects.get_or_create(product=product, defaults={"quantity": pd["stock"]})
+                Inventory.objects.get_or_create(product=product, defaults={"quantity": 0})
+                if pd["stock"] > 0:
+                    InventoryService.increase_stock(
+                        product=product,
+                        quantity=pd["stock"],
+                        transaction_type=TransactionType.PURCHASE,
+                        reference_id=str(product.id),
+                        reference_type="SEED",
+                        notes="Boshlang'ich qoldiq (seed)",
+                        purchase_price=product.purchase_price,
+                    )
                 created_count += 1
         self.stdout.write(f"  [+] {created_count} products created")
 

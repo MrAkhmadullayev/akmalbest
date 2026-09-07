@@ -10,7 +10,12 @@ from .models import Inventory, InventoryTransaction
 class InventorySerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source="product.name", read_only=True)
     product_barcode = serializers.CharField(source="product.barcode", read_only=True)
-    stock_status = serializers.CharField(source="product.stock_status", read_only=True)
+    # MUHIM: `quantity` va `stock_status` bitta manbadan (shu Inventory qatoridan)
+    # olinadi. Ilgari status `product.current_stock` dan olinardi va ikkalasi
+    # og'ib qolganda "Qoldiq: 12 / Tugagan" kabi zid ma'lumot chiqardi.
+    stock_status = serializers.ReadOnlyField()
+    min_stock = serializers.IntegerField(source="product.min_stock", read_only=True)
+    warning_stock = serializers.IntegerField(source="product.warning_stock", read_only=True)
 
     class Meta:
         model = Inventory
@@ -21,6 +26,8 @@ class InventorySerializer(serializers.ModelSerializer):
             "product_barcode",
             "quantity",
             "stock_status",
+            "min_stock",
+            "warning_stock",
             "updated_at",
         ]
         read_only_fields = ["id", "updated_at"]

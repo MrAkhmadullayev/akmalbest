@@ -12,6 +12,7 @@ from rest_framework.response import Response
 from apps.accounts.permissions import HasModulePermission
 from apps.customers.models import Customer
 
+from .finance import aggregate_sales
 from .models import Payment, Sale, SaleItem
 from .serializers import (
     PaymentSerializer,
@@ -55,17 +56,11 @@ class SaleViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
 
-        # We calculate summary on the *filtered* queryset
-        from decimal import Decimal
-
-        from django.db.models import Sum
-
-        summary = {
-            "total_sales": queryset.aggregate(t=Sum("total"))["t"] or Decimal("0"),
-            "cash_sales": queryset.filter(payment_method="CASH").aggregate(t=Sum("total"))["t"] or Decimal("0"),
-            "card_sales": queryset.filter(payment_method="CARD").aggregate(t=Sum("total"))["t"] or Decimal("0"),
-            "debt_sales": queryset.filter(payment_method="DEBT").aggregate(t=Sum("total"))["t"] or Decimal("0"),
-        }
+        # Summary FILTRLANGAN queryset ustidan, lekin:
+        #  - bekor qilingan savdolar hisobga kirmaydi,
+        #  - qaytarilgan qism ayiriladi (sof tushum).
+        # Ilgari ikkalasi ham to'liq summasi bilan qo'shilardi.
+        summary = aggregate_sales(queryset)
 
         page = self.paginate_queryset(queryset)
         if page is not None:
@@ -166,22 +161,23 @@ class SaleViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"], url_path="cancel")
     def cancel_sale(self, request, pk=None):
-        """Cancel an entire sale."""
+        """Cancel an entire sale.
+
+        Butun amal servisda, bitta tranzaksiyada bajariladi: tovar omborga
+        qaytadi, pul qaytarimi yoziladi va nasiya savdo bo'lsa qarz yopiladi.
+        """
         sale = self.get_object()
-        if sale.status != "COMPLETED":
+
+        try:
+            SaleService.cancel_sale(sale=sale, user=request.user)
+        except ValueError as e:
+            return Response({"success": False, "message": str(e), "errors": {}}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception:
+            logger.exception("Savdoni bekor qilishda kutilmagan xatolik")
             return Response(
-                {"success": False, "message": "Faqat bajarilgan savdolarni bekor qilish mumkin.", "errors": {}},
-                status=status.HTTP_400_BAD_REQUEST,
+                {"success": False, "message": "Savdoni bekor qilishda xatolik yuz berdi.", "errors": {}},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-
-        # Return all items to inventory
-        for item in sale.items.all():
-            remaining = item.quantity - item.returned_quantity
-            if remaining > 0:
-                SaleService.return_sale_item(item, remaining, request.user)
-
-        sale.status = "CANCELLED"
-        sale.save(update_fields=["status", "updated_at"])
 
         return Response(
             {

@@ -118,6 +118,12 @@ export interface Sale {
   discount: string;
   total: string;
   profit: string;
+  /** Qaytarilgan qism. Sof tushum = total - returned_total.
+   *  Eski javoblarda bo'lmasligi mumkin, shuning uchun ixtiyoriy. */
+  returned_total?: string;
+  returned_profit?: string;
+  net_total?: string;
+  net_profit?: string;
   payment_method: 'CASH' | 'CARD' | 'DEBT';
   status: 'COMPLETED' | 'CANCELLED' | 'RETURNED' | 'PARTIALLY_RETURNED';
   items_count?: number;
@@ -136,6 +142,8 @@ export interface SaleItem {
   selling_price_snapshot: string;
   quantity: number;
   returned_quantity: number;
+  returnable_quantity?: number;
+  returned_subtotal?: string;
   discount: string;
   subtotal: string;
   profit: string;
@@ -146,6 +154,8 @@ export interface Payment {
   sale: string;
   amount: string;
   payment_method: string;
+  /** true bo'lsa — kassadan chiqqan qaytarim. */
+  is_refund?: boolean;
   created_by: string;
   created_by_name: string;
   created_at: string;
@@ -215,7 +225,9 @@ export interface InventoryItem {
   product_name: string;
   product_barcode: string;
   quantity: number;
-  stock_status: string;
+  stock_status: 'SUFFICIENT' | 'WARNING' | 'LOW' | 'OUT_OF_STOCK';
+  min_stock?: number;
+  warning_stock?: number;
   updated_at: string;
 }
 
