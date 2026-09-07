@@ -60,11 +60,23 @@ class SaleService:
             qty = int(item_data["quantity"])
             item_discount = Decimal(str(item_data.get("discount", "0")))
 
-            # Stock validation
-            if product.current_stock < qty:
+            # Stock validation — use Inventory (authoritative) NOT product.current_stock
+            from apps.inventory.models import Inventory as InventoryModel
+
+            try:
+                inventory_rec = InventoryModel.objects.select_for_update().get(product=product)
+                actual_stock = inventory_rec.quantity
+            except InventoryModel.DoesNotExist:
+                actual_stock = 0
+
+            # If product.current_stock is out of sync, fix it atomically
+            if product.current_stock != actual_stock:
+                Product.objects.filter(pk=product.pk).update(current_stock=actual_stock)
+                product.current_stock = actual_stock
+
+            if actual_stock < qty:
                 raise ValueError(
-                    f"Omborda yetarli mahsulot mavjud emas. "
-                    f"'{product.name}' - Mavjud: {product.current_stock}, So'ralgan: {qty}"
+                    f"Omborda yetarli mahsulot mavjud emas. '{product.name}' - Mavjud: {actual_stock}, So'ralgan: {qty}"
                 )
 
             item_subtotal = (product.selling_price * qty) - item_discount

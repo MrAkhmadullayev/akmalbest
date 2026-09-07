@@ -217,6 +217,21 @@ class ProductBarcodeLookupView(generics.RetrieveAPIView):
     def retrieve(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
+
+            # Always sync current_stock from Inventory (authoritative source)
+            from apps.inventory.models import Inventory
+
+            try:
+                inv = Inventory.objects.get(product=instance)
+                if instance.current_stock != inv.quantity:
+                    # Fix out-of-sync denormalized field silently
+                    Product.objects.filter(pk=instance.pk).update(current_stock=inv.quantity)
+                    instance.current_stock = inv.quantity
+            except Inventory.DoesNotExist:
+                # No inventory record — create one with 0
+                Inventory.objects.create(product=instance, quantity=0)
+                instance.current_stock = 0
+
             serializer = self.get_serializer(instance)
             return Response(
                 {
