@@ -30,7 +30,12 @@ class DebtViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [HasModulePermission, IsCashierOrAdmin]
 
     def get_queryset(self):
-        return Debt.objects.select_related("customer", "sale").prefetch_related("payments").all()
+        qs = Debt.objects.select_related("customer", "sale").prefetch_related("payments").all()
+        # Frontend'dan status__ne=PAID kelsa, to'langan qarzlarni chiqaramiz.
+        exclude_status = self.request.query_params.get("status__ne")
+        if exclude_status:
+            qs = qs.exclude(status=exclude_status)
+        return qs
 
     def get_serializer_class(self):
         if self.action == "retrieve":

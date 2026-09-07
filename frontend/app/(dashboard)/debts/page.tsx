@@ -10,6 +10,7 @@ export default function DebtsPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [showPaid, setShowPaid] = useState(false);
 
   // Pay debt modal / form states
   const [selectedDebt, setSelectedDebt] = useState<any>(null);
@@ -19,14 +20,23 @@ export default function DebtsPage() {
   const [errorMsg, setErrorMsg] = useState('');
 
   const { data, isLoading } = useQuery({
-    queryKey: ['debts', search, page],
-    queryFn: () => debtsService.getAll({ search, page: page.toString() }),
+    queryKey: ['debts', search, page, showPaid],
+    queryFn: () => {
+      const params: Record<string, string> = { search, page: page.toString() };
+      if (!showPaid) {
+        // PAID qarzlarni ko'rsatmaymiz — foydalanuvchi to'liq to'langan
+        // qarzlarni ko'rishi shart emas (ular smena tarixida saqlanadi)
+        params.status__ne = 'PAID';
+      }
+      return debtsService.getAll(params);
+    },
   });
 
   const payMutation = useMutation({
     mutationFn: (payload: any) => debtsService.makePayment(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['debts'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       setSelectedDebt(null);
       setAmount('');
       setNotes('');
@@ -63,7 +73,7 @@ export default function DebtsPage() {
         </div>
       </div>
 
-      <div className="card p-4 flex gap-4">
+      <div className="card p-4 flex flex-col md:flex-row gap-4">
         <div className="flex-1 relative">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
             <Search size={18} />
@@ -75,9 +85,21 @@ export default function DebtsPage() {
               setSearch(e.target.value);
               setPage(1);
             }}
-            placeholder="Mijoz ismi yoki telefon raqami bo&apos;yicha qidirish..."
+            placeholder="Mijoz ismi yoki telefon raqami bo'yicha qidirish..."
             className="input !pl-10"
           />
+        </div>
+        <div className="flex items-center gap-2 px-2">
+          <input
+            type="checkbox"
+            id="showPaid"
+            checked={showPaid}
+            onChange={(e) => setShowPaid(e.target.checked)}
+            className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-600 cursor-pointer"
+          />
+          <label htmlFor="showPaid" className="text-sm text-gray-700 cursor-pointer select-none">
+            To&apos;langanlarni ham ko&apos;rsatish
+          </label>
         </div>
       </div>
 

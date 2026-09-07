@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as zod from 'zod';
@@ -36,6 +36,7 @@ type ProductFormData = zod.infer<typeof productSchema>;
 
 export default function NewProductPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const barcodeInputRef = useRef<HTMLInputElement>(null);
 
   const { register, handleSubmit, setValue, formState: { errors } } = useForm<ProductFormData>({
@@ -65,6 +66,12 @@ export default function NewProductPage() {
   const createMutation = useMutation({
     mutationFn: (data: FormData) => productsService.create(data),
     onSuccess: () => {
+      // Yangi mahsulot yaratilganda barcha tegishli keshlarni tozalaymiz
+      // Aks holda POS, ombor va boshqa sahifalar eski ma'lumotni ko'rsatadi
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      queryClient.invalidateQueries({ queryKey: ['pos-search'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       router.push('/products');
     },
     onError: (error: any) => {

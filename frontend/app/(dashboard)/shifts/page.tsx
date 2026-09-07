@@ -134,6 +134,62 @@ export default function ShiftsPage() {
                   <p className="text-xl font-bold text-gray-900 dark:text-white">{formatCurrency(selectedShift.total_expenses)}</p>
                 </div>
               </div>
+
+              {/* Qarz to'lovlari va qo'shimcha ma'lumotlar */}
+              {(parseFloat(selectedShift.total_debt_payments_cash || '0') > 0 ||
+                parseFloat(selectedShift.total_debt_payments_card || '0') > 0 ||
+                parseFloat(selectedShift.total_returns || '0') > 0) && (
+                <div className="border-t border-gray-100 pt-6">
+                  <h3 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase mb-4">Qo&apos;shimcha harakatlar</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {parseFloat(selectedShift.total_debt_payments_cash || '0') > 0 && (
+                      <div className="p-4 bg-teal-50 dark:bg-teal-900/20 rounded-xl">
+                        <div className="flex items-center gap-2 text-teal-600 mb-2">
+                          <Wallet size={18} />
+                          <span className="font-medium">Qarz to&apos;lovi (Naqd)</span>
+                        </div>
+                        <p className="text-xl font-bold text-gray-900 dark:text-white">{formatCurrency(selectedShift.total_debt_payments_cash)}</p>
+                        <p className="text-xs text-teal-600 mt-1">Nasiya to&apos;lovlari — naqd</p>
+                      </div>
+                    )}
+
+                    {parseFloat(selectedShift.total_debt_payments_card || '0') > 0 && (
+                      <div className="p-4 bg-cyan-50 dark:bg-cyan-900/20 rounded-xl">
+                        <div className="flex items-center gap-2 text-cyan-600 mb-2">
+                          <CreditCard size={18} />
+                          <span className="font-medium">Qarz to&apos;lovi (Karta)</span>
+                        </div>
+                        <p className="text-xl font-bold text-gray-900 dark:text-white">{formatCurrency(selectedShift.total_debt_payments_card)}</p>
+                        <p className="text-xs text-cyan-600 mt-1">Nasiya to&apos;lovlari — karta</p>
+                      </div>
+                    )}
+
+                    {parseFloat(selectedShift.total_returns || '0') > 0 && (
+                      <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl">
+                        <div className="flex items-center gap-2 text-amber-600 mb-2">
+                          <ShoppingBag size={18} />
+                          <span className="font-medium">Qaytarimlar</span>
+                        </div>
+                        <p className="text-xl font-bold text-gray-900 dark:text-white">{formatCurrency(selectedShift.total_returns)}</p>
+                        <p className="text-xs text-amber-600 mt-1">Qaytarilgan tovarlar summasi</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Kutilgan kassa summasi */}
+              <div className="border-t border-gray-100 pt-6">
+                <div className="p-4 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-indigo-600 mb-1">Kutilgan kassa (Naqd)</p>
+                      <p className="text-xs text-gray-500">Naqd savdo + Qarz naqd to&apos;lovlari − Xarajatlar</p>
+                    </div>
+                    <p className="text-2xl font-bold text-indigo-700">{formatCurrency(selectedShift.expected_cash)}</p>
+                  </div>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="card p-12 text-center text-gray-400">
