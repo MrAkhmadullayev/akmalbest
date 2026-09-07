@@ -32,9 +32,11 @@ class DebtViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         qs = Debt.objects.select_related("customer", "sale").prefetch_related("payments").all()
         # Frontend'dan status__ne=PAID kelsa, to'langan qarzlarni chiqaramiz.
-        exclude_status = self.request.query_params.get("status__ne")
-        if exclude_status:
-            qs = qs.exclude(status=exclude_status)
+        request = getattr(self, "request", None)
+        if request and hasattr(request, "query_params"):
+            exclude_status = request.query_params.get("status__ne")
+            if exclude_status:
+                qs = qs.exclude(status=exclude_status)
         return qs
 
     def get_serializer_class(self):
