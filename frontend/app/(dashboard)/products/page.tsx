@@ -51,9 +51,14 @@ export default function ProductsPage() {
       queryClient.invalidateQueries({ queryKey: ['products'] });
     },
     onError: (error: any) => {
-      const msg = error.response?.data?.detail || "Mahsulotni o'chirishda xatolik yuz berdi.";
+      const data = error.response?.data;
+      const msg =
+        data?.detail ||
+        data?.message ||
+        (typeof data === 'string' ? data : null) ||
+        "Mahsulotni o'chirishda xatolik yuz berdi.";
       alert(msg);
-    }
+    },
   });
 
   const addStockMutation = useMutation({

@@ -142,15 +142,15 @@ class ProductViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         from django.db.models import ProtectedError
 
+        instance = self.get_object()
         try:
-            return super().destroy(request, *args, **kwargs)
+            instance.delete()
         except ProtectedError:
-            return Response(
-                {
-                    "detail": "Bu mahsulot bilan bog'liq savdo hujjatlari mavjud bo'lganligi sababli uni o'chirib bo'lmaydi."
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            # Mahsulotni o'chirish o'rniga faol emas holatga o'tkazamiz (soft-delete)
+            instance.is_active = False
+            instance.save(update_fields=["is_active", "updated_at"])
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
         detail=True,
