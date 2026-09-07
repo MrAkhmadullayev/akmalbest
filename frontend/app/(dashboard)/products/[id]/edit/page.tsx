@@ -7,8 +7,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as zod from 'zod';
 import { productsService, categoriesService, brandsService } from '@/services/products';
 import { suppliersService } from '@/services/suppliers';
-import { useEffect } from 'react';
-import { ArrowLeft, Save } from 'lucide-react';
+import apiClient from '@/lib/api-client';
+import { useEffect, useState } from 'react';
+import { ArrowLeft, Save, Package, X } from 'lucide-react';
 import Link from 'next/link';
 
 const productSchema = zod.object({
@@ -38,7 +39,12 @@ export default function EditProductPage() {
   const queryClient = useQueryClient();
   const productId = params?.id as string;
 
-  const { register, handleSubmit, setValue, reset, formState: { errors } } = useForm<ProductFormData>({
+  // Stock adjustment modal state
+  const [showStockModal, setShowStockModal] = useState(false);
+  const [newStockQty, setNewStockQty] = useState('');
+  const [stockNote, setStockNote] = useState("Qo'lda tuzatish");
+
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
   });
 
@@ -95,6 +101,38 @@ export default function EditProductPage() {
     },
   });
 
+  // Stock adjustment mutation — calls the existing /api/inventory/adjust/ endpoint
+  const adjustStockMutation = useMutation({
+    mutationFn: (payload: { product_id: string; new_quantity: number; notes: string }) =>
+      apiClient.post('/inventory/adjust/', payload),
+    onSuccess: (response: any) => {
+      const newQty = response?.data?.data?.new_quantity;
+      alert(`Zaxira muvaffaqiyatli yangilandi! Yangi miqdor: ${newQty ?? newStockQty} ta`);
+      queryClient.invalidateQueries({ queryKey: ['product', productId] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      setShowStockModal(false);
+      setNewStockQty('');
+      setStockNote("Qo'lda tuzatish");
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.message || err?.response?.data?.detail || 'Xatolik yuz berdi';
+      alert(`Xatolik: ${msg}`);
+    },
+  });
+
+  const handleStockAdjust = () => {
+    const qty = parseInt(newStockQty);
+    if (isNaN(qty) || qty < 0) {
+      alert("Iltimos, to'g'ri miqdor kiriting (0 yoki undan katta son)");
+      return;
+    }
+    adjustStockMutation.mutate({
+      product_id: productId,
+      new_quantity: qty,
+      notes: stockNote || "Qo'lda tuzatish",
+    });
+  };
+
   const onSubmit = (data: ProductFormData) => {
     const formData = new FormData();
     Object.entries(data).forEach(([key, val]) => {
@@ -108,6 +146,8 @@ export default function EditProductPage() {
   if (isProductLoading) {
     return <div className="p-8 text-center text-gray-500">Yuklanmoqda...</div>;
   }
+
+  const currentStock = product?.data?.current_stock ?? 0;
 
   return (
     <div className="p-6 lg:p-8 space-y-6 max-w-4xl">
@@ -202,21 +242,31 @@ export default function EditProductPage() {
             <input {...register('selling_price')} type="number" className="input" />
           </div>
 
-          <div>
+          {/* Joriy zaxira — read-only display + adjust button */}
+          <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Joriy zaxira (dona)</label>
-            {/* Faqat ko'rsatish uchun. Forma holatiga BOG'LANMAGAN — aks holda
-                eskirgan qiymat so'rovga qo'shilib, ombor qoldig'ini buzardi.
-                Qoldiq faqat "Kirim qo'shish" va "Ombor tuzatish" orqali o'zgaradi. */}
-            <input
-              type="number"
-              value={product?.data?.current_stock ?? 0}
-              readOnly
-              disabled
-              className="input font-semibold text-indigo-700 bg-gray-50 cursor-not-allowed"
-            />
+            <div className="flex gap-3 items-center">
+              <input
+                type="number"
+                value={currentStock}
+                readOnly
+                className="input font-semibold text-indigo-700 bg-gray-50 cursor-not-allowed flex-1"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setNewStockQty(String(currentStock));
+                  setShowStockModal(true);
+                }}
+                className="btn-secondary flex items-center gap-2 whitespace-nowrap"
+              >
+                <Package size={16} />
+                Zaxirani o&apos;zgartirish
+              </button>
+            </div>
             <p className="text-xs text-gray-400 mt-1">
-              Ombordagi hozirgi miqdor. O'zgartirish uchun &quot;Kirim qo&apos;shish&quot; yoki Ombor
-              bo&apos;limidagi tuzatishdan foydalaning.
+              Hozirgi ombordagi miqdor. &quot;Zaxirani o&apos;zgartirish&quot; tugmasi orqali yangilang — barcha
+              o&apos;zgarishlar ombor tarixi (audit)da saqlanadi.
             </p>
           </div>
 
@@ -279,6 +329,88 @@ export default function EditProductPage() {
           </button>
         </div>
       </form>
+
+      {/* Stock Adjustment Modal */}
+      {showStockModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Zaxirani o&apos;zgartirish</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                  {product?.data?.name} — hozir: <strong>{currentStock} ta</strong>
+                </p>
+              </div>
+              <button
+                onClick={() => setShowStockModal(false)}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                  Yangi miqdor (dona)
+                </label>
+                <input
+                  type="number"
+                  value={newStockQty}
+                  onChange={(e) => setNewStockQty(e.target.value)}
+                  className="input text-lg font-semibold"
+                  min="0"
+                  placeholder="Yangi zaxira miqdorini kiriting..."
+                  autoFocus
+                />
+                {newStockQty !== '' && parseInt(newStockQty) !== currentStock && (
+                  <p className="text-xs mt-1">
+                    {parseInt(newStockQty) > currentStock
+                      ? <span className="text-emerald-600">+{parseInt(newStockQty) - currentStock} ta qo&apos;shiladi</span>
+                      : <span className="text-orange-600">-{currentStock - parseInt(newStockQty)} ta kamayadi</span>
+                    }
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                  Sabab / Izoh
+                </label>
+                <input
+                  type="text"
+                  value={stockNote}
+                  onChange={(e) => setStockNote(e.target.value)}
+                  className="input"
+                  placeholder="Masalan: inventarizatsiya, hisobni tuzatish..."
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowStockModal(false)}
+                  className="btn-secondary flex-1"
+                >
+                  Bekor qilish
+                </button>
+                <button
+                  type="button"
+                  onClick={handleStockAdjust}
+                  disabled={
+                    adjustStockMutation.isPending ||
+                    newStockQty === '' ||
+                    parseInt(newStockQty) === currentStock
+                  }
+                  className="btn-primary flex-1"
+                >
+                  {adjustStockMutation.isPending ? 'Saqlanmoqda...' : 'Saqlash'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
