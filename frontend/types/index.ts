@@ -339,3 +339,32 @@ export interface ApiResponse<T = unknown> {
   data?: T;
   errors?: Record<string, string[]>;
 }
+
+// ---- Smena tafsilotlari ----
+export type ShiftDetailKind =
+  | 'sales' | 'profit' | 'cash' | 'card' | 'debt'
+  | 'expenses' | 'debt_payments' | 'debt_payments_cash' | 'debt_payments_card' | 'returns';
+
+export interface ShiftDetailRow {
+  id: string;
+  title: string;
+  subtitle: string;
+  person: string;
+  amount: string;
+  extra: string;
+  method?: string;
+  status?: string;
+  created_at: string;
+  link: string;
+}
+
+export interface ShiftDetailResponse {
+  shift_number: string;
+  kind: ShiftDetailKind;
+  label: string;
+  opened_at: string;
+  closed_at: string;
+  count: number;
+  total: string;
+  results: ShiftDetailRow[];
+}
