@@ -70,7 +70,7 @@ export default function SuppliersPage() {
   const suppliers = data?.data?.results || [];
 
   return (
-    <div className="p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div className="p-4 sm:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
       {/* Form */}
       <div className="card p-6 h-fit space-y-6">
         <div>
@@ -179,7 +179,7 @@ export default function SuppliersPage() {
                   </div>
                 </div>
 
-                <div className="border-t pt-3 flex items-center justify-between">
+                <div className="border-t pt-3 flex flex-wrap items-center justify-between gap-2">
                   <span className="text-xs font-semibold text-indigo-600">
                     {s.total_purchases} ta xarid
                   </span>

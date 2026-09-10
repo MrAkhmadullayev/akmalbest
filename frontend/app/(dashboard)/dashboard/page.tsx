@@ -178,7 +178,7 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="p-6 lg:p-8 space-y-8">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
@@ -233,7 +233,7 @@ export default function DashboardPage() {
             </Link>
           </div>
           <div className="overflow-x-auto">
-            <table className="data-table">
+            <table className="data-table min-w-[620px]">
               <thead>
                 <tr>
                   <th>Raqam</th>
@@ -292,7 +292,7 @@ export default function DashboardPage() {
             </Link>
           </div>
           <div className="overflow-x-auto">
-            <table className="data-table">
+            <table className="data-table min-w-[620px]">
               <thead>
                 <tr>
                   <th>Mahsulot</th>
@@ -334,7 +334,7 @@ export default function DashboardPage() {
             </Link>
           </div>
           <div className="overflow-x-auto">
-            <table className="data-table">
+            <table className="data-table min-w-[620px]">
               <thead>
                 <tr>
                   <th>Mijoz</th>

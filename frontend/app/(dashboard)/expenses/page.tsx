@@ -67,8 +67,8 @@ export default function ExpensesPage() {
   const expenses = expensesData?.data?.results || [];
 
   return (
-    <div className="p-6 lg:p-8 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Xarajatlar</h1>
           <p className="text-gray-500 mt-1">Do&apos;konning umumiy operatsion va yordamchi xarajatlari</p>
@@ -85,50 +85,54 @@ export default function ExpensesPage() {
           {isLoading ? (
             <div className="p-8 text-center text-gray-500">Yuklanmoqda...</div>
           ) : (
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Sana</th>
-                  <th>Sarlavha</th>
-                  <th>Summa</th>
-                  <th>Mas&apos;ul</th>
-                  <th>Tavsif</th>
-                  <th className="text-right">Amallar</th>
-                </tr>
-              </thead>
-              <tbody>
-                {expenses.map((e: any) => (
-                  <tr key={e.id}>
-                    <td>{formatDate(e.expense_date)}</td>
-                    <td className="font-medium text-gray-900">{e.title}</td>
-                    <td className="font-bold text-red-600">{formatCurrency(e.amount)}</td>
-                    <td>{e.created_by_name}</td>
-                    <td className="text-gray-500 text-xs max-w-xs truncate">{e.description || '-'}</td>
-                    <td>
-                      <div className="flex justify-end gap-2">
-                        {isAdmin && (
-                          <button
-                            onClick={() => handleDelete(e.id, e.title)}
-                            disabled={deleteMutation.isPending}
-                            className="p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded text-red-400 hover:text-red-600 cursor-pointer"
-                            title="Bekor qilish"
-                          >
-                            <XCircle size={18} />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {expenses.length === 0 && (
+            <div className="overflow-x-auto">
+              {/* .card da overflow-hidden bor: busiz tor ekranda o'ng ustunlar
+                  (Amallar) kesilib qolardi va ularga yetib bo'lmasdi. */}
+              <table className="data-table min-w-[680px]">
+                <thead>
                   <tr>
-                    <td colSpan={6} className="text-center text-gray-400 py-12">
-                      Xarajatlar kiritilmagan
-                    </td>
+                    <th>Sana</th>
+                    <th>Sarlavha</th>
+                    <th>Summa</th>
+                    <th>Mas&apos;ul</th>
+                    <th>Tavsif</th>
+                    <th className="text-right">Amallar</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {expenses.map((e: any) => (
+                    <tr key={e.id}>
+                      <td>{formatDate(e.expense_date)}</td>
+                      <td className="font-medium text-gray-900">{e.title}</td>
+                      <td className="font-bold text-red-600">{formatCurrency(e.amount)}</td>
+                      <td>{e.created_by_name}</td>
+                      <td className="text-gray-500 text-xs max-w-xs truncate">{e.description || '-'}</td>
+                      <td>
+                        <div className="flex justify-end gap-2">
+                          {isAdmin && (
+                            <button
+                              onClick={() => handleDelete(e.id, e.title)}
+                              disabled={deleteMutation.isPending}
+                              className="p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded text-red-400 hover:text-red-600 cursor-pointer"
+                              title="Bekor qilish"
+                            >
+                              <XCircle size={18} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {expenses.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="text-center text-gray-400 py-12">
+                        Xarajatlar kiritilmagan
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
 

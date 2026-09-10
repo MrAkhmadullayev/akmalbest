@@ -85,8 +85,8 @@ export default function SaleDetailPage() {
   };
 
   return (
-    <div className="p-6 lg:p-8 space-y-6 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between no-print">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-4xl mx-auto">
+      <div className="flex flex-wrap items-center justify-between gap-3 no-print">
         <div className="flex items-center gap-4">
           <Link href="/sales" className="p-2 bg-white rounded-lg border hover:bg-gray-50">
             <ArrowLeft size={18} />
@@ -146,7 +146,7 @@ export default function SaleDetailPage() {
 
         {/* Items table */}
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm min-w-[680px]">
             <thead>
               <tr className="border-b border-gray-200">
                 <th className="text-left pb-3 font-semibold text-gray-500">Mahsulot</th>

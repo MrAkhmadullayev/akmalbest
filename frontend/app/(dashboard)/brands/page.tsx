@@ -70,7 +70,7 @@ export default function BrandsPage() {
   const brands = data?.data?.results || [];
 
   return (
-    <div className="p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div className="p-4 sm:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
       {/* Left panel */}
       <div className="card p-6 h-fit space-y-6">
         <div>
@@ -138,7 +138,7 @@ export default function BrandsPage() {
           <div className="text-center text-gray-500 py-8">Yuklanmoqda...</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="data-table">
+            <table className="data-table min-w-[560px]">
               <thead>
                 <tr>
                   <th>Nomi</th>

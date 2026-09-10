@@ -62,13 +62,13 @@ export default function SalesPage() {
   };
 
   return (
-    <div className="p-6 lg:p-8 space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Savdolar tarixi</h1>
         <p className="text-gray-500 dark:text-gray-400 mt-1">Barcha sotilgan tovarlar va to&apos;lovlar ro&apos;yxati</p>
       </div>
 
-      <div className="card p-4 flex gap-4">
+      <div className="card p-4 flex flex-col md:flex-row gap-4">
         <div className="flex-1 relative">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
             <Search size={18} />
@@ -116,82 +116,86 @@ export default function SalesPage() {
         {isLoading ? (
           <div className="p-8 text-center text-gray-500">Yuklanmoqda...</div>
         ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Raqam</th>
-                <th>Sana</th>
-                <th>Kassir</th>
-                <th>Mijoz</th>
-                <th>Jami summa</th>
-                <th>To&apos;lov usuli</th>
-                <th>Holat</th>
-                <th className="text-right">Amallar</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sales.map((sale) => (
-                <tr key={sale.id}>
-                  <td className="font-semibold text-indigo-600">
-                    <Link href={`/sales/${sale.id}`}>{sale.sale_number}</Link>
-                  </td>
-                  <td>{formatDate(sale.created_at)}</td>
-                  <td>{sale.cashier_name}</td>
-                  <td>{sale.customer_name || '-'}</td>
-                  <td className="font-bold">
-                    {formatCurrency(sale.net_total ?? sale.total)}
-                    {Number(sale.returned_total ?? 0) > 0 && (
-                      <span className="block text-xs font-normal text-orange-600">
-                        asl: {formatCurrency(sale.total)}
-                      </span>
-                    )}
-                  </td>
-                  <td>
-                    <span className="badge bg-gray-100 text-gray-800">
-                      {getPaymentMethodLabel(sale.payment_method)}
-                    </span>
-                  </td>
-                  <td>
-                    <span className={`badge ${
-                      sale.status === 'COMPLETED' ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400'
-                        : sale.status === 'CANCELLED' ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'
-                        : 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400'
-                    }`}>
-                      {getStatusLabel(sale.status)}
-                    </span>
-                  </td>
-                  <td>
-                    <div className="flex justify-end gap-2">
-                      <Link href={`/sales/${sale.id}`} className="p-1 hover:bg-gray-50 dark:hover:bg-gray-800 rounded text-blue-500" title="Ko'rish">
-                        <Eye size={18} />
-                      </Link>
-                      {sale.status === 'COMPLETED' && (
-                        <button
-                          onClick={() => handleCancel(sale.id, sale.sale_number)}
-                          disabled={cancelMutation.isPending}
-                          className="p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded text-red-400 hover:text-red-600 cursor-pointer"
-                          title="Bekor qilish"
-                        >
-                          <XCircle size={18} />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {sales.length === 0 && (
+          <div className="overflow-x-auto">
+            {/* .card da overflow-hidden bor: busiz tor ekranda o'ng ustunlar
+                (Amallar) kesilib qolardi va ularga yetib bo'lmasdi. */}
+            <table className="data-table min-w-[860px]">
+              <thead>
                 <tr>
-                  <td colSpan={8} className="text-center text-gray-400 py-12">
-                    Savdolar topilmadi
-                  </td>
+                  <th>Raqam</th>
+                  <th>Sana</th>
+                  <th>Kassir</th>
+                  <th>Mijoz</th>
+                  <th>Jami summa</th>
+                  <th>To&apos;lov usuli</th>
+                  <th>Holat</th>
+                  <th className="text-right">Amallar</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {sales.map((sale) => (
+                  <tr key={sale.id}>
+                    <td className="font-semibold text-indigo-600">
+                      <Link href={`/sales/${sale.id}`}>{sale.sale_number}</Link>
+                    </td>
+                    <td>{formatDate(sale.created_at)}</td>
+                    <td>{sale.cashier_name}</td>
+                    <td>{sale.customer_name || '-'}</td>
+                    <td className="font-bold">
+                      {formatCurrency(sale.net_total ?? sale.total)}
+                      {Number(sale.returned_total ?? 0) > 0 && (
+                        <span className="block text-xs font-normal text-orange-600">
+                          asl: {formatCurrency(sale.total)}
+                        </span>
+                      )}
+                    </td>
+                    <td>
+                      <span className="badge bg-gray-100 text-gray-800">
+                        {getPaymentMethodLabel(sale.payment_method)}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`badge ${
+                        sale.status === 'COMPLETED' ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400'
+                          : sale.status === 'CANCELLED' ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'
+                          : 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400'
+                      }`}>
+                        {getStatusLabel(sale.status)}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="flex justify-end gap-2">
+                        <Link href={`/sales/${sale.id}`} className="p-1 hover:bg-gray-50 dark:hover:bg-gray-800 rounded text-blue-500" title="Ko'rish">
+                          <Eye size={18} />
+                        </Link>
+                        {sale.status === 'COMPLETED' && (
+                          <button
+                            onClick={() => handleCancel(sale.id, sale.sale_number)}
+                            disabled={cancelMutation.isPending}
+                            className="p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded text-red-400 hover:text-red-600 cursor-pointer"
+                            title="Bekor qilish"
+                          >
+                            <XCircle size={18} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {sales.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="text-center text-gray-400 py-12">
+                      Savdolar topilmadi
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         )}
 
         {totalPages > 1 && (
-          <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+          <div className="px-4 sm:px-6 py-4 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3">
             <span className="text-sm text-gray-500">Jami {totalCount} ta savdo</span>
             <div className="flex gap-2">
               <button

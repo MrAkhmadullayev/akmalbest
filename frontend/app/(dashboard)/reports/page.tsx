@@ -36,7 +36,7 @@ export default function ReportsPage() {
   }
 
   return (
-    <div className="p-6 lg:p-8 space-y-8">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Analitika va Hisobotlar</h1>
         <p className="text-gray-500 mt-1">Do&apos;konning umumiy moliyaviy va savdo ko&apos;rsatkichlari</p>
@@ -100,7 +100,7 @@ export default function ReportsPage() {
             <h2 className="font-bold text-gray-900">Eng ko&apos;p sotilgan mahsulotlar (TOP 10)</h2>
           </div>
           <div className="overflow-x-auto">
-            <table className="data-table">
+            <table className="data-table min-w-[560px]">
               <thead>
                 <tr>
                   <th>Mahsulot</th>
@@ -127,7 +127,7 @@ export default function ReportsPage() {
         <div className="card p-6 space-y-6">
           <h2 className="font-bold text-gray-900 border-b pb-3">Ombor balansi hisoboti</h2>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="p-4 bg-gray-50 rounded-xl">
               <span className="text-xs text-gray-400 font-bold block">JAMI MAHSULOT TURI</span>
               <span className="text-2xl font-extrabold text-gray-900 mt-1 inline-block">

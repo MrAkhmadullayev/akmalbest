@@ -75,7 +75,7 @@ export default function CustomersPage() {
   const totalPages = Math.ceil(totalCount / pageSize);
 
   return (
-    <div className="p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div className="p-4 sm:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
       {/* Form panel */}
       <div className="card p-6 h-fit space-y-6">
         <div>
@@ -150,7 +150,7 @@ export default function CustomersPage() {
       {/* List panel */}
       <div className="card p-6 lg:col-span-2 space-y-4 flex flex-col justify-between">
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-xl font-bold text-gray-900">Mijozlar ro&apos;yxati</h2>
           </div>
 
@@ -190,7 +190,7 @@ export default function CustomersPage() {
                     </div>
                   </div>
 
-                  <div className="border-t pt-3 flex items-center justify-between">
+                  <div className="border-t pt-3 flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <p className="text-[10px] text-gray-400 font-medium">QARZ QOLDIG&apos;I</p>
                       <p className={`text-sm font-bold ${parseFloat(c.total_debt) > 0 ? 'text-red-600' : 'text-gray-500'}`}>
@@ -217,7 +217,7 @@ export default function CustomersPage() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="pt-4 border-t border-gray-100 flex items-center justify-between mt-4">
+          <div className="pt-4 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3 mt-4">
             <span className="text-sm text-gray-500">Jami {totalCount} ta mijoz</span>
             <div className="flex gap-2">
               <button

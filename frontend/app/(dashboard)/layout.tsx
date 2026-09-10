@@ -7,7 +7,7 @@ import Link from 'next/link';
 import {
   LayoutDashboard, ShoppingCart, Package,
   Users, CreditCard, Wallet, BarChart3,
-  Bell, UserCog, Settings, LogOut, ChevronLeft, Menu, Tags, Clock,
+  Bell, UserCog, Settings, LogOut, ChevronLeft, Menu, X, Tags, Clock,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
@@ -47,14 +47,26 @@ export default function DashboardLayout({
   const { user, isAuthenticated, isLoading, logout, hasPermission } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  // `sidebarOpen` FAQAT desktop uchun: yon panel keng (w-64) yoki tor (w-20).
+  // Mobilda yon panel umuman joy egallamaydi — u ustidan ochiladigan
+  // drawer bo'lib, `mobileNavOpen` bilan boshqariladi.
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
+  // Sahifa almashganda drawer yopilsin — aks holda u ochiq qolib,
+  // yangi sahifani to'sib turadi.
   useEffect(() => {
-    // Mobil qurilmalarda yon panelni yopiq holatda boshlash
-    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-      setSidebarOpen(false);
-    }
-  }, []);
+    setMobileNavOpen(false);
+  }, [pathname]);
+
+  // Drawer ochiq turganda orqa fon aylanmasin.
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    document.body.style.overflow = mobileNavOpen ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileNavOpen]);
 
   const { data: unreadData } = useQuery({
     queryKey: ['notifications-unread'],
@@ -134,23 +146,45 @@ export default function DashboardLayout({
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-950 overflow-hidden transition-colors duration-200">
-      {/* Sidebar */}
+      {/* Mobil drawer ortidagi qorong'i fon */}
+      {mobileNavOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setMobileNavOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Sidebar.
+          Mobilda (< lg): ustidan chiqadigan drawer — `fixed`, oqim ichida joy
+          egallamaydi, shuning uchun kontentga to'liq kenglik qoladi.
+          Desktopda (lg+): oddiy ustun, `sidebarOpen` bilan keng/tor bo'ladi. */}
       <aside
-        className={`${
-          sidebarOpen ? 'w-64' : 'w-20'
-        } bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col transition-all duration-300 ease-in-out flex-shrink-0`}
+        className={`fixed inset-y-0 left-0 z-50 w-64 shrink-0 transform bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col transition-transform duration-300 ease-in-out lg:static lg:z-auto lg:translate-x-0 lg:transition-all ${
+          mobileNavOpen ? 'translate-x-0' : '-translate-x-full'
+        } ${sidebarOpen ? 'lg:w-64' : 'lg:w-20'}`}
       >
         {/* Logo */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-gray-100 dark:border-gray-800">
-          {sidebarOpen && (
-            <div className="flex items-center gap-2">
-              <span className="text-xl">🍷</span>
-              <span className="font-bold text-lg text-gray-900 dark:text-white">Alkagol</span>
-            </div>
-          )}
+          {/* Mobilda logo har doim ko'rinadi (drawer kengligi 256px),
+              desktopda esa faqat panel ochiq bo'lganda. */}
+          <div className={`flex items-center gap-2 ${sidebarOpen ? '' : 'lg:hidden'}`}>
+            <span className="text-xl">🍷</span>
+            <span className="font-bold text-lg text-gray-900 dark:text-white">Alkagol</span>
+          </div>
+          {/* Mobil: yopish tugmasi */}
+          <button
+            onClick={() => setMobileNavOpen(false)}
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors cursor-pointer lg:hidden"
+            aria-label="Menyuni yopish"
+          >
+            <X size={18} />
+          </button>
+          {/* Desktop: keng/tor almashtirish */}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors cursor-pointer"
+            className="hidden lg:block p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors cursor-pointer"
+            aria-label={sidebarOpen ? 'Yon panelni yig\'ish' : 'Yon panelni ochish'}
           >
             {sidebarOpen ? <ChevronLeft size={18} /> : <Menu size={18} />}
           </button>
@@ -172,14 +206,16 @@ export default function DashboardLayout({
                 }`}
               >
                 <Icon size={20} className={isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300'} />
-                {sidebarOpen && <span>{item.name}</span>}
+                {/* Yorliq mobilda HAR DOIM ko'rinadi (drawer keng),
+                    desktopda esa panel yig'ilgan bo'lsa yashiriladi. */}
+                <span className={sidebarOpen ? '' : 'lg:hidden'}>{item.name}</span>
                 {item.href === '/notifications' && unreadCount > 0 && (
-                  <span className={`${sidebarOpen ? 'ml-auto' : 'absolute -top-1 -right-1'} bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center`}>
+                  <span className={`ml-auto ${sidebarOpen ? '' : 'lg:absolute lg:-top-1 lg:-right-1 lg:ml-0'} bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center`}>
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
                 {item.href === '/debts' && dueDebtsCount > 0 && (
-                  <span className={`${sidebarOpen ? 'ml-auto' : 'absolute -top-1 -right-1'} bg-orange-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center`} title="Muddati o'tgan qarzlar">
+                  <span className={`ml-auto ${sidebarOpen ? '' : 'lg:absolute lg:-top-1 lg:-right-1 lg:ml-0'} bg-orange-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center`} title="Muddati o'tgan qarzlar">
                     !
                   </span>
                 )}
@@ -190,35 +226,67 @@ export default function DashboardLayout({
 
         {/* User info */}
         <div className="border-t border-gray-100 dark:border-gray-800 p-3">
-          <div className={`flex items-center ${sidebarOpen ? 'gap-3' : 'justify-center'}`}>
+          <div className={`flex items-center gap-3 ${sidebarOpen ? '' : 'lg:justify-center lg:gap-0'}`}>
             <div className="w-9 h-9 bg-indigo-100 dark:bg-indigo-900/50 rounded-lg flex items-center justify-center flex-shrink-0">
               <span className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm">
                 {user?.first_name?.[0]}{user?.last_name?.[0]}
               </span>
             </div>
-            {sidebarOpen && (
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{user?.full_name}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.role}</p>
-              </div>
-            )}
-            {sidebarOpen && (
-              <button
-                onClick={handleLogout}
-                className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors cursor-pointer"
-                title="Chiqish"
-              >
-                <LogOut size={18} />
-              </button>
-            )}
+            <div className={`flex-1 min-w-0 ${sidebarOpen ? '' : 'lg:hidden'}`}>
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{user?.full_name}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.role}</p>
+            </div>
+            <button
+              onClick={handleLogout}
+              className={`p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors cursor-pointer ${
+                sidebarOpen ? '' : 'lg:hidden'
+              }`}
+              title="Chiqish"
+            >
+              <LogOut size={18} />
+            </button>
           </div>
         </div>
       </aside>
 
-      {/* Main content */}
-      <main className="flex-1 overflow-auto">
-        {children}
-      </main>
+      {/* Asosiy ustun: mobil sarlavha + kontent */}
+      <div className="flex flex-1 flex-col overflow-hidden">
+        {/* Mobil yuqori panel — yon panel drawerga aylangani uchun
+            menyuni ochadigan tugma shu yerda turadi. */}
+        <header className="lg:hidden h-14 shrink-0 flex items-center gap-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4">
+          <button
+            onClick={() => setMobileNavOpen(true)}
+            className="p-2 -ml-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors cursor-pointer"
+            aria-label="Menyuni ochish"
+          >
+            <Menu size={22} />
+          </button>
+          <span className="text-lg">🍷</span>
+          <span className="font-bold text-gray-900 dark:text-white">Alkagol</span>
+          {(unreadCount > 0 || dueDebtsCount > 0) && (
+            <span className="ml-auto flex items-center gap-2">
+              {unreadCount > 0 && (
+                <Link href="/notifications" className="relative p-1.5 text-gray-500 dark:text-gray-400">
+                  <Bell size={20} />
+                  <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                </Link>
+              )}
+              {dueDebtsCount > 0 && (
+                <Link href="/debts" className="relative p-1.5 text-gray-500 dark:text-gray-400" title="Muddati o'tgan qarzlar">
+                  <CreditCard size={20} />
+                  <span className="absolute -top-0.5 -right-0.5 bg-orange-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">!</span>
+                </Link>
+              )}
+            </span>
+          )}
+        </header>
+
+        <main className="flex-1 overflow-auto">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

@@ -22,8 +22,8 @@ export default function PurchasesPage() {
   const totalPages = Math.ceil(totalCount / pageSize);
 
   return (
-    <div className="p-6 lg:p-8 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Xaridlar (Omborga kirim)</h1>
           <p className="text-gray-500 mt-1">Yetkazib beruvchilardan xarid qilingan mahsulotlar tarixi</p>
@@ -34,7 +34,7 @@ export default function PurchasesPage() {
         </Link>
       </div>
 
-      <div className="card p-4 flex gap-4">
+      <div className="card p-4 flex flex-col md:flex-row gap-4">
         <div className="flex-1 relative">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
             <Search size={18} />
@@ -57,7 +57,7 @@ export default function PurchasesPage() {
           <div className="p-8 text-center text-gray-500">Yuklanmoqda...</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="data-table">
+            <table className="data-table min-w-[680px]">
               <thead>
                 <tr>
                   <th>Sana</th>
@@ -92,7 +92,7 @@ export default function PurchasesPage() {
         )}
 
         {totalPages > 1 && (
-          <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+          <div className="px-4 sm:px-6 py-4 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3">
             <span className="text-sm text-gray-500">
               Jami {totalCount} tadan {(page - 1) * pageSize + 1}-
               {Math.min(page * pageSize, totalCount)} gacha

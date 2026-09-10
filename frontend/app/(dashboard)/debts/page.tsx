@@ -65,8 +65,8 @@ export default function DebtsPage() {
   const totalPages = Math.ceil(totalCount / pageSize);
 
   return (
-    <div className="p-6 lg:p-8 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Qarzlar (Nasiyalar) boshqaruvi</h1>
           <p className="text-gray-500 mt-1">Mijozlar nasiba qarzdorliklari va qarz to&apos;lovlari monitoringi</p>
@@ -109,67 +109,71 @@ export default function DebtsPage() {
           {isLoading ? (
             <div className="p-8 text-center text-gray-500">Yuklanmoqda...</div>
           ) : (
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Mijoz</th>
-                  <th>Telefon</th>
-                  <th>Boshlang&apos;ich qarz</th>
-                  <th>To&apos;langan</th>
-                  <th>Qoldiq qarz</th>
-                  <th>Muddat</th>
-                  <th>Holat</th>
-                  <th className="text-right">To&apos;lov</th>
-                </tr>
-              </thead>
-              <tbody>
-                {debts.map((d: any) => {
-                  const status = getDebtStatus(d.status);
-                  return (
-                    <tr key={d.id}>
-                      <td className="font-medium text-gray-900">{d.customer_name}</td>
-                      <td className="text-gray-500 text-xs">{d.customer_phone}</td>
-                      <td>{formatCurrency(d.original_amount)}</td>
-                      <td className="text-emerald-600 font-medium">{formatCurrency(d.paid_amount)}</td>
-                      <td className="font-bold text-red-600">{formatCurrency(d.remaining_amount)}</td>
-                      <td className="text-xs text-gray-500">{d.due_date}</td>
-                      <td>
-                        <span className={`badge ${status.color}`}>
-                          {status.icon} {status.label}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="flex justify-end">
-                          {d.status !== 'PAID' && (
-                            <button
-                              onClick={() => {
-                                setSelectedDebt(d);
-                                setAmount(d.remaining_amount);
-                              }}
-                              className="btn-success btn-sm px-3 py-1 cursor-pointer"
-                            >
-                              To&apos;lash
-                            </button>
-                          )}
-                        </div>
+            <div className="overflow-x-auto">
+              {/* .card da overflow-hidden bor: busiz tor ekranda o'ng ustunlar
+                  (Amallar) kesilib qolardi va ularga yetib bo'lmasdi. */}
+              <table className="data-table min-w-[820px]">
+                <thead>
+                  <tr>
+                    <th>Mijoz</th>
+                    <th>Telefon</th>
+                    <th>Boshlang&apos;ich qarz</th>
+                    <th>To&apos;langan</th>
+                    <th>Qoldiq qarz</th>
+                    <th>Muddat</th>
+                    <th>Holat</th>
+                    <th className="text-right">To&apos;lov</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {debts.map((d: any) => {
+                    const status = getDebtStatus(d.status);
+                    return (
+                      <tr key={d.id}>
+                        <td className="font-medium text-gray-900">{d.customer_name}</td>
+                        <td className="text-gray-500 text-xs">{d.customer_phone}</td>
+                        <td>{formatCurrency(d.original_amount)}</td>
+                        <td className="text-emerald-600 font-medium">{formatCurrency(d.paid_amount)}</td>
+                        <td className="font-bold text-red-600">{formatCurrency(d.remaining_amount)}</td>
+                        <td className="text-xs text-gray-500">{d.due_date}</td>
+                        <td>
+                          <span className={`badge ${status.color}`}>
+                            {status.icon} {status.label}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="flex justify-end">
+                            {d.status !== 'PAID' && (
+                              <button
+                                onClick={() => {
+                                  setSelectedDebt(d);
+                                  setAmount(d.remaining_amount);
+                                }}
+                                className="btn-success btn-sm px-3 py-1 cursor-pointer"
+                              >
+                                To&apos;lash
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {debts.length === 0 && (
+                    <tr>
+                      <td colSpan={8} className="text-center text-gray-400 py-12">
+                        Qarzlar topilmadi
                       </td>
                     </tr>
-                  );
-                })}
-                {debts.length === 0 && (
-                  <tr>
-                    <td colSpan={8} className="text-center text-gray-400 py-12">
-                      Qarzlar topilmadi
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                  )}
+                </tbody>
+              </table>
+            </div>
           )}
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+            <div className="px-4 sm:px-6 py-4 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3">
               <span className="text-sm text-gray-500">Jami {totalCount} ta qarz</span>
               <div className="flex gap-2">
                 <button
@@ -222,7 +226,7 @@ export default function DebtsPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">To&apos;lov usuli</label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('CASH')}

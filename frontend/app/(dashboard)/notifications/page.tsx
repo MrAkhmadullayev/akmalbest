@@ -32,8 +32,8 @@ export default function NotificationsPage() {
   const notifications = data?.data?.results || [];
 
   return (
-    <div className="p-6 lg:p-8 space-y-6 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-4xl mx-auto">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <span className="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><Bell size={24} /></span>
           <div>

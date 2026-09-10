@@ -114,7 +114,7 @@ export default function NewPurchasePage() {
   const grandTotal = items.reduce((sum, i) => sum + i.quantity * i.purchase_price, 0);
 
   return (
-    <div className="p-6 lg:p-8 space-y-6 max-w-5xl">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-5xl">
       <div className="flex items-center gap-4">
         <Link href="/purchases" className="p-2 bg-white rounded-lg border hover:bg-gray-50">
           <ArrowLeft size={18} />
@@ -167,7 +167,7 @@ export default function NewPurchasePage() {
 
         {/* Product selector search */}
         <div className="card p-6 space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-lg font-bold text-gray-900">Mahsulotlar ro&apos;yxati</h2>
             <button
               type="button"
@@ -214,7 +214,7 @@ export default function NewPurchasePage() {
             <p className="text-center text-gray-400 py-8">Hali mahsulotlar qo&apos;shilmagan</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="data-table">
+              <table className="data-table min-w-[680px]">
                 <thead>
                   <tr>
                     <th>Mahsulot</th>

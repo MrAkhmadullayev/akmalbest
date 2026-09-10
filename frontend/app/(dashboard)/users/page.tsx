@@ -155,8 +155,8 @@ export default function UsersPage() {
   const users = data?.data?.results || [];
 
   return (
-    <div className="p-6 lg:p-8 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Foydalanuvchilar (Xodimlar)</h1>
           <p className="text-gray-500 mt-1">Do&apos;kon xodimlari ro&apos;yxati va ruxsatlar boshqaruvi</p>
@@ -180,54 +180,58 @@ export default function UsersPage() {
           {isLoading ? (
             <div className="p-8 text-center text-gray-500">Yuklanmoqda...</div>
           ) : (
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Ism Familiya</th>
-                  <th>Login</th>
-                  <th>Rol</th>
-                  <th>Telefon</th>
-                  <th>Holat</th>
-                  <th className="text-right">Amallar</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((u: any) => (
-                  <tr key={u.id}>
-                    <td className="font-semibold text-gray-900">{u.full_name}</td>
-                    <td>{u.username}</td>
-                    <td>
-                      <span className="badge bg-indigo-50 text-indigo-700 font-semibold flex items-center gap-1 w-fit">
-                        <Shield size={12} />
-                        {u.role}
-                      </span>
-                    </td>
-                    <td>{u.phone || '-'}</td>
-                    <td>
-                      <span className={`badge ${u.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
-                        {u.is_active ? 'Faol' : 'Nofaol'}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => handleEdit(u)}
-                          className="p-1 text-blue-400 hover:text-blue-600 cursor-pointer"
-                        >
-                          <Edit size={18} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(u.id)}
-                          className="p-1 text-red-400 hover:text-red-600 cursor-pointer"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </td>
+            <div className="overflow-x-auto">
+              {/* .card da overflow-hidden bor: busiz tor ekranda o'ng ustunlar
+                  (Amallar) kesilib qolardi va ularga yetib bo'lmasdi. */}
+              <table className="data-table min-w-[720px]">
+                <thead>
+                  <tr>
+                    <th>Ism Familiya</th>
+                    <th>Login</th>
+                    <th>Rol</th>
+                    <th>Telefon</th>
+                    <th>Holat</th>
+                    <th className="text-right">Amallar</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {users.map((u: any) => (
+                    <tr key={u.id}>
+                      <td className="font-semibold text-gray-900">{u.full_name}</td>
+                      <td>{u.username}</td>
+                      <td>
+                        <span className="badge bg-indigo-50 text-indigo-700 font-semibold flex items-center gap-1 w-fit">
+                          <Shield size={12} />
+                          {u.role}
+                        </span>
+                      </td>
+                      <td>{u.phone || '-'}</td>
+                      <td>
+                        <span className={`badge ${u.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
+                          {u.is_active ? 'Faol' : 'Nofaol'}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="flex justify-end gap-2">
+                          <button
+                            onClick={() => handleEdit(u)}
+                            className="p-1 text-blue-400 hover:text-blue-600 cursor-pointer"
+                          >
+                            <Edit size={18} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(u.id)}
+                            className="p-1 text-red-400 hover:text-red-600 cursor-pointer"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
 
@@ -337,7 +341,7 @@ export default function UsersPage() {
                 {role === 'SUPER_ADMIN' ? (
                   <div className="text-sm text-gray-500 bg-gray-50 p-3 rounded-lg">Super Admin barcha bo'limlarga to'liq huquqqa ega.</div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {MODULE_LABELS.map(opt => (
                       <div key={opt.key} className="flex items-center gap-2">
                         <input

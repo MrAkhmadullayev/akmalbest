@@ -25,7 +25,7 @@ export default function SettingsPage() {
   if (!mounted) return null;
 
   return (
-    <div className="p-6 lg:p-8 space-y-6 max-w-3xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-3xl mx-auto">
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Tizim Sozlamalari</h1>
         <p className="text-gray-500 dark:text-gray-400 mt-1">Do&apos;kon rekvizitlari va qonuniy yosh cheklovlari sozlamalari</p>
@@ -72,7 +72,7 @@ export default function SettingsPage() {
         <div className="card p-6 space-y-4">
           <h2 className="text-lg font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">Tashqi ko&apos;rinish (Mavzu)</h2>
           
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <button
               type="button"
               onClick={() => setTheme('light')}

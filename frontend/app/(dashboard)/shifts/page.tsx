@@ -17,7 +17,7 @@ export default function ShiftsPage() {
   const shifts = data?.data?.results || [];
 
   return (
-    <div className="p-6 lg:p-8 space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Smenalar tarixi</h1>
         <p className="text-gray-500 dark:text-gray-400 mt-1">Yopilgan smenalar (Z-Report) bo&apos;yicha kunlik savdo va xarajat hisobotlari</p>
@@ -181,7 +181,7 @@ export default function ShiftsPage() {
               {/* Kutilgan kassa summasi */}
               <div className="border-t border-gray-100 pt-6">
                 <div className="p-4 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <p className="text-sm font-medium text-indigo-600 mb-1">Kutilgan kassa (Naqd)</p>
                       <p className="text-xs text-gray-500">Naqd savdo + Qarz naqd to&apos;lovlari − Xarajatlar</p>
